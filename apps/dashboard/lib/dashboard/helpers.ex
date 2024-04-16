@@ -21,15 +21,16 @@ defmodule Dashboard.Helpers do
     end
   end
 
-  def create_db_url(configs, hide_password \\ true)
+  def create_db_url(configs, opts \\ [])
 
   def create_db_url(
         ~M{db_username, db_password, db_host, db_name} = config,
-        hide_password
+        opts
       )
       when present?(db_username) and present?(db_password) and
              present?(db_name) and present?(db_host) do
-    password = hide_password(db_password, hide_password)
+    hide_password? = Keyword.get(opts, :hide_password, false)
+    password = if hide_password?, do: hide_password(db_password), else: db_password
 
     "ecto://#{db_username}:#{password}@#{db_host}/#{db_name}?#{make_query_params(config)}"
     |> String.trim_trailing("?")
@@ -51,10 +52,12 @@ defmodule Dashboard.Helpers do
 
   defp make_query_params(_config), do: ""
 
-  defp hide_password(password, true),
-    do: password |> String.split("") |> Enum.map(fn _ -> "•" end) |> Enum.join("")
-
-  defp hide_password(password, false), do: password
+ defp hide_password(password) do
+    password
+    |> String.split("")
+    |> Enum.map(fn _ -> "•" end)
+    |> Enum.join("")
+  end
 
   defp get_matching_pattern_index(patterns, string) do
     Enum.find_index(patterns, fn pattern_struct ->

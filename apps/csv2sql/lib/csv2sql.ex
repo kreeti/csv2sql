@@ -25,13 +25,15 @@ defmodule Csv2sql do
     # Load configurations
     Csv2sql.Config.Loader.load(%{
       db_type: "mysql",
-      db_url: "root:mysql@localhost/csv2sql",
+      db_url: "ecto://user:password@localhost/database",
       log: false,
-      source_directory: "/home/arpan/dev/others/csv2sql/apps/csv2sql/priv/"
+      source_directory: "/home/bhargav/Desktop/csvs"
     })
 
     # Begin analysis
-    Task.start(fn -> Csv2sql.Stages.Analyze.analyze_files() end)
+    Task.start(fn ->
+      Csv2sql.Stages.Analyze.analyze_files()
+    end)
 
     # Await messages
     receive do

@@ -111,7 +111,7 @@ defmodule Csv2sql.Config.Loader do
 
     db_url =
       if args[:db_url],
-        do: "ecto://#{args[:db_url]}",
+        do: args[:db_url],
         else: raise("Please provide a valid database url")
 
     varchar_limit = get_varchar_limit(args)
