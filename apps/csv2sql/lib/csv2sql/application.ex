@@ -4,7 +4,6 @@ defmodule Csv2sql.Application do
   """
 
   use Application
-  @current_env Mix.env()
 
   def start(_type, _args) do
     children = [
