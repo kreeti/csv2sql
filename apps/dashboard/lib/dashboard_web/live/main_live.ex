@@ -28,6 +28,7 @@ defmodule DashboardWeb.Live.MainLive do
        changeset: Config.get_defaults() |> Map.merge(local_storage_config) |> Config.changeset(),
        matching_date_time: nil,
        constraints: Csv2sql.Config.Loader.get_constraints(),
+       time_spend: 0,
        state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}
      )}
   end
@@ -45,14 +46,16 @@ defmodule DashboardWeb.Live.MainLive do
         Csv2sql.Stages.Analyze.analyze_files()
       end)
 
-      send(self(), :updated_state)
+      Process.send_after(self(), :updated_state, 200)
     end
+
     {:noreply, assign(socket, state: Csv2sql.ProgressTracker.get_state())}
   end
 
   @impl true
   def handle_event("reset", _unsigned_params, socket) do
-    {:noreply, assign(socket, state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil})}
+    {:noreply,
+     assign(socket, state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}, time_spend: 0)}
   end
 
   @impl true
@@ -148,6 +151,12 @@ defmodule DashboardWeb.Live.MainLive do
   def handle_info(:updated_state, socket) do
     state = Csv2sql.ProgressTracker.get_state()
 
+    time_taken =
+      DateTime.utc_now()
+      |> Time.diff(state.start_time, :millisecond)
+      |> Kernel./(1000)
+      |> Float.round()
+
     state.status
     |> case do
       status when status in [:finish] ->
@@ -162,7 +171,7 @@ defmodule DashboardWeb.Live.MainLive do
         :working
     end
 
-    {:noreply, assign(socket, state: state)}
+    {:noreply, assign(socket, state: state, time_spend: time_taken)}
   end
 
   @impl true
@@ -214,6 +223,13 @@ defmodule DashboardWeb.Live.MainLive do
         ~H"""
         <div>
           <%= cond do %>
+           <% @state.status not in [:init, :working, :finish] -> %>
+            <% {:error, reason} = @state.status %>
+            <h2 class="text-center mb-4 mt-2">Errors! <%= inspect(reason)%> </h2>
+            <div class="w-100 d-flex justify-content-center align-items-center">
+            <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
+            </div>
+
            <% @state.status == :init and @changeset.valid? -> %>
             <h2 class="text-center mb-4 mt-2">Start Parse</h2>
             <div class="w-100 d-flex justify-content-center align-items-center">
@@ -221,20 +237,21 @@ defmodule DashboardWeb.Live.MainLive do
             </div>
 
           <% not @changeset.valid? -> %>
+           <%= inspect(@changeset)%>
            <h2 class="text-center mb-4 mt-2">Errors in config, please check</h2>
-
-          <% @state.status == :working -> %>
-            <h2 class="text-center mb-4 mt-2">Working!</h2>
 
           <% @state.status == :finish -> %>
             <h2 class="text-center mb-4 mt-2">Finished! Reset</h2>
-            <div class="w-100 d-flex justify-content-center align-items-center">
-            <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
+            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
+              <strong> Total time taken: </strong> <%= @time_spend %> seconds
+              <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
             </div>
 
           <% true -> %>
-            <% {:error, reason} = @state.status %>
-            <h2 class="text-center mb-4 mt-2">Errors! <%= inspect(reason)%> </h2>
+            <h2 class="text-center mb-4 mt-2">Working!</h2>
+            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
+              <strong> Time Elapsed: </strong> <%= @time_spend %> seconds
+            </div>
           <% end %>
 
           <table class = "table w-75 m-2 table-bordered border-dark">

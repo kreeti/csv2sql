@@ -168,7 +168,7 @@ defmodule Csv2sql.Database do
       column_types,
       row,
       fn {header, type}, data ->
-        {header, encode(type, data)}
+        {header, encode(type, String.trim(data))}
       end
     )
   end

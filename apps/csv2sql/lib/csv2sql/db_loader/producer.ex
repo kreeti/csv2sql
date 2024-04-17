@@ -21,10 +21,14 @@ defmodule Csv2sql.DbLoader.Producer do
     )
   end
 
+  @impl true
   def init(~M{file} = state) do
+    bom = :unicode.encoding_to_bom(:utf8)
+
     csv_stream =
       file.path
       |> File.stream!([:trim_bom, read_ahead: @csv_read_ahead])
+      |> Stream.map(&String.replace_prefix(&1, bom, ""))
       |> CSV.parse_stream()
       |> with_index()
       |> Stream.chunk_every(Helpers.get_config(:insertion_chunk_size))
@@ -32,6 +36,7 @@ defmodule Csv2sql.DbLoader.Producer do
     {:producer, Map.put(state, :csv_stream, csv_stream)}
   end
 
+  @impl true
   def handle_demand(demand, ~M{file, csv_stream} = state) do
     {csv_chunks, remainder_stream} = StreamSplit.take_and_drop(csv_stream, demand)
     new_state = %{state | csv_stream: remainder_stream}
@@ -46,5 +51,5 @@ defmodule Csv2sql.DbLoader.Producer do
   end
 
   defp with_index(stream),
-    do: if(Helpers.get_config(:ordered), do: stream |> Stream.with_index(1), else: stream)
+    do: if(Helpers.get_config(:ordered), do: Stream.with_index(stream, 1), else: stream)
 end
