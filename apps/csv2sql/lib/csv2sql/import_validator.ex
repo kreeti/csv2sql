@@ -51,8 +51,11 @@ defmodule Csv2sql.ImportValidator do
   Get row count in csv file
   """
   def get_count_from_csv(file) do
+    bom = :unicode.encoding_to_bom(:utf8)
+
     file
     |> File.stream!([:trim_bom])
+    |> Stream.map(&String.replace_prefix(&1, bom, ""))
     |> CSV.parse_stream()
     |> Enum.count()
   end

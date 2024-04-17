@@ -94,7 +94,7 @@ defmodule Csv2sql.Database do
       Enum.map(data_chunk, fn chunk ->
         Enum.map(chunk, fn {col, val} ->
           val =
-            if val == "" do
+            if String.trim(val) == "" do
               nil
             else
               case(types[col]) do

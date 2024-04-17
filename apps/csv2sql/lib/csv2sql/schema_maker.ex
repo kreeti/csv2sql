@@ -103,10 +103,12 @@ defmodule Csv2sql.SchemaMaker do
       Application.get_env(:csv2sql, Csv2sql.SchemaMaker)[:schema_infer_chunk_size]
 
     db_type = Csv2sql.get_db_type()
+    bom = :unicode.encoding_to_bom(:utf8)
 
     types =
       path
       |> File.stream!([:trim_bom])
+      |> Stream.map(&String.replace_prefix(&1, bom, ""))
       |> CSV.parse_stream()
       |> Stream.chunk_every(schema_infer_chunk_size)
       |> Task.async_stream(__MODULE__, :infer_type, [headers_type_list],
@@ -193,7 +195,11 @@ defmodule Csv2sql.SchemaMaker do
 
   defp header_map_to_list(header_map, headers) do
     Enum.reduce(headers, [], fn header, acc ->
-      acc ++ [{header, header_map[header]}]
+      if not is_nil(header_map[header]) do
+        acc ++ [{header, header_map[header]}]
+      else
+        acc
+      end
     end)
   end
 
