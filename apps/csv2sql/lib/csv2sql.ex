@@ -27,7 +27,7 @@ defmodule Csv2sql do
       db_type: "mysql",
       db_url: "ecto://user:password@localhost/database",
       log: false,
-      source_directory: "tmp/csvs"
+      source_directory: "/tmp/csvs"
     })
 
     # Begin analysis
