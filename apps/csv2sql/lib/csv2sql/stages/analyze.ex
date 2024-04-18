@@ -1,7 +1,6 @@
 defmodule Csv2sql.Stages.Analyze do
   use Csv2sql.Types
   alias Csv2sql.{TypeDeducer, Database, DbLoader, ProgressTracker, Helpers}
-  import ShorterMaps
 
   @spec analyze_files :: :ok
   def analyze_files do
@@ -31,7 +30,7 @@ defmodule Csv2sql.Stages.Analyze do
       |> Flow.map(&process_file/1)
       |> Flow.run()
 
-     wait_for_finish()
+      wait_for_finish()
     catch
       _, reason ->
         Csv2sql.ProgressTracker.report_error(reason)
@@ -48,6 +47,7 @@ defmodule Csv2sql.Stages.Analyze do
       {:error, reason} ->
         IO.inspect("Error #{inspect(reason)}")
         reason
+
       _ ->
         wait_for_finish()
     end
@@ -127,11 +127,11 @@ defmodule Csv2sql.Stages.Analyze do
     end
   end
 
-  defp get_file_stats(~M{%Csv2sql.File path} = file) do
-    ~M{size} = File.stat!(path)
+  defp get_file_stats(%Csv2sql.File{path: path} = file) do
+    %{size: size} = File.stat!(path)
     {row_count, column_types} = TypeDeducer.get_count_and_types(path)
 
-    ~M{%Csv2sql.File file | size, row_count, column_types}
+    %{file | size: size, row_count: row_count, column_types: column_types}
   end
 
   defp is_csv?(filepath) do

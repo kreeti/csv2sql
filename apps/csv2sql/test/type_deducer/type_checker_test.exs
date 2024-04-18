@@ -225,7 +225,7 @@ defmodule Csv2sql.Config.TypeCheckerTest do
       Application.put_env(
         :csv2sql,
         :config,
-        ~M{%Csv2sql.Config default_config | varchar_limit: 10}
+        %{ default_config | varchar_limit: 10}
       )
 
       [
@@ -247,7 +247,7 @@ defmodule Csv2sql.Config.TypeCheckerTest do
       Application.put_env(
         :csv2sql,
         :config,
-        ~M{%Csv2sql.Config default_config | date_patterns, datetime_patterns}
+        %{default_config | date_patterns: date_patterns, datetime_patterns: datetime_patterns}
       )
     end
 

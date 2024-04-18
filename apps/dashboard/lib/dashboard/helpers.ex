@@ -1,6 +1,4 @@
 defmodule Dashboard.Helpers do
-  import ShorterMaps
-
   defguard present?(value) when value != nil and value != ""
 
   def match_date_time(changeset, date_time_sample) do
@@ -24,7 +22,8 @@ defmodule Dashboard.Helpers do
   def create_db_url(configs, opts \\ [])
 
   def create_db_url(
-        ~M{db_username, db_password, db_host, db_name} = config,
+        %{db_username: db_username, db_password: db_password, db_host: db_host, db_name: db_name} =
+          config,
         opts
       )
       when present?(db_username) and present?(db_password) and
@@ -39,20 +38,20 @@ defmodule Dashboard.Helpers do
   def create_db_url(_configs, _hide_password), do: "NA"
 
   # == Private helpers ==
-  defp make_query_params(~M{db_attrs}) when is_list(db_attrs) do
+  defp make_query_params(%{db_attrs: db_attrs}) when is_list(db_attrs) do
     db_attrs
     |> Enum.map(& &1.changes)
     |> Enum.reject(fn
-      ~M{name, value} when present?(name) and present?(value) -> false
+      %value{name: name, value: value} when present?(name) and present?(value) -> false
       _ -> true
     end)
-    |> Enum.into(%{}, fn ~M{name, value} -> {name, value} end)
+    |> Enum.into(%{}, fn %{name: name, value: value} -> {name, value} end)
     |> URI.encode_query()
   end
 
   defp make_query_params(_config), do: ""
 
- defp hide_password(password) do
+  defp hide_password(password) do
     password
     |> String.split("")
     |> Enum.map(fn _ -> "•" end)

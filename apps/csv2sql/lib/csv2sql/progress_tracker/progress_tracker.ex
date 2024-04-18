@@ -9,8 +9,6 @@ defmodule Csv2sql.ProgressTracker do
   alias Csv2sql.ProgressTracker.State
   require Logger
 
-  import ShorterMaps
-
   # Sets the files list
   @spec init_files(list(Csv2sql.File.t())) :: files_map()
   def init_files(files), do: GenServer.call(__MODULE__, {:init_files, files})
@@ -62,26 +60,29 @@ defmodule Csv2sql.ProgressTracker do
   def handle_call({:init_files, files}, _from, %State{} = state) do
     state =
       if files == [] do
-        ~M{%State state | status: :finish, end_time: DateTime.utc_now()}
+        %{state | status: :finish, end_time: DateTime.utc_now()}
       else
-        files = Enum.into(files, %{}, fn ~M{%Csv2sql.File path} = file -> {path, file} end)
-        ~M{%State state | files, status: :working, start_time: DateTime.utc_now()}
+        files = Enum.into(files, %{}, fn %Csv2sql.File{path: path} = file -> {path, file} end)
+        %{state | files: files, status: :working, start_time: DateTime.utc_now()}
       end
 
     {:reply, files, state}
   end
 
   @impl true
-  def handle_call(:add_subscriber, {caller_pid, _ref_tag}, ~M{%State subscribers} = state),
-    do: {:reply, :ok, %State{state | subscribers: [caller_pid | subscribers]}}
+  def handle_call(:add_subscriber, {caller_pid, _ref_tag}, %State{subscribers: subscribers} = state),
+    do: {:reply, :ok, %{state | subscribers: [caller_pid | subscribers]}}
 
   @impl true
-  def handle_call({:report_error, _error}, _from, ~M{%State status: :error} = state),
+  def handle_call({:report_error, _error}, _from, %State{status: :error} = state),
     do: {:reply, :already_errored, state}
 
   @impl true
-  def handle_call({:report_error, error}, _from, ~M{%State subscribers} = state) do
-    Enum.each(subscribers, fn subscriber -> Process.send(subscriber, {:report_error, error}, []) end)
+  def handle_call({:report_error, error}, _from, %State{subscribers: subscribers} = state) do
+    Enum.each(subscribers, fn subscriber ->
+      Process.send(subscriber, {:report_error, error}, [])
+    end)
+
     {:reply, :ok, %State{state | status: {:error, error}}}
   end
 
@@ -89,42 +90,49 @@ defmodule Csv2sql.ProgressTracker do
   def handle_cast(:reset_state, state) do
     files = %{}
 
-    {:noreply, ~M{%State state | files, status: :init, start_time: nil, end_time: nil}}
+    {:noreply, %{state | files: files, status: :init, start_time: nil, end_time: nil}}
   end
 
   @impl true
-  def handle_cast({:update_file, _file}, ~M{%State status: :error} = state), do: {:noreply, state}
+  def handle_cast({:update_file, _file}, %State{status: :error} = state), do: {:noreply, state}
 
   @impl true
-  def handle_cast({:update_file, ~M{%Csv2sql.File path} = file}, ~M{%State files} = state) do
+  def handle_cast({:update_file, %Csv2sql.File{path: path} = file}, %State{files: files} = state) do
     {_old_file, files} = Map.get_and_update!(files, path, fn old_file -> {old_file, file} end)
-    {:noreply, ~M{%State state | files}}
+    {:noreply, %{state | files: files}}
   end
 
   @impl true
-  def handle_cast({:update_row_count, _path, _rows_inserted}, ~M{%State status: :error} = state),
+  def handle_cast({:update_row_count, _path, _rows_inserted}, %State{status: :error} = state),
     do: {:noreply, state}
 
   @impl true
-  def handle_cast({:update_row_count, path, rows_inserted}, ~M{%State files, subscribers} = state) do
+  def handle_cast(
+        {:update_row_count, path, rows_inserted},
+        %State{files: files, subscribers: subscribers} = state
+      ) do
     {_current_value, files} =
-      Map.get_and_update!(files, path, fn ~M{%Csv2sql.File row_count, rows_processed} = file ->
-        rows_processed = rows_processed + rows_inserted
-        status = if rows_processed == row_count, do: :done, else: :loading
+      Map.get_and_update!(files, path, fn
+        %Csv2sql.File{
+          row_count: row_count,
+          rows_processed: rows_processed
+        } = file ->
+          rows_processed = rows_processed + rows_inserted
+          status = if rows_processed == row_count, do: :done, else: :loading
 
-        {file, ~M{%Csv2sql.File file | rows_processed, status}}
+          {file, %{file | rows_processed: rows_processed, status: status}}
       end)
 
     state =
       files
-      |> Enum.all?(fn {_path, ~M{%Csv2sql.File status}} -> status == :done end)
+      |> Enum.all?(fn {_path, %Csv2sql.File{status: status}} -> status == :done end)
       |> if do
         end_time = DateTime.utc_now()
         Enum.each(subscribers, fn subscriber -> Process.send(subscriber, :finish, []) end)
 
-        ~M{%State state | status: :finish, subscribers: [], files, end_time}
+        %{state | status: :finish, subscribers: [], files: files, end_time: end_time}
       else
-        ~M{%State state | files}
+        %{state | files: files}
       end
 
     {:noreply, state}

@@ -4,7 +4,6 @@ defmodule Csv2sql.Database do
   """
   use Csv2sql.Types
   alias Csv2sql.{Config, ProgressTracker, Helpers}
-  import ShorterMaps
   require Logger
 
   @ordering_column_name "CSV_ORDERING_ID"
@@ -16,7 +15,7 @@ defmodule Csv2sql.Database do
   def start_repo() do
     repo = Helpers.get_config(:db_type) |> get_repo()
     db_url = Helpers.get_config(:db_url)
-    ~M{%URI query} = URI.parse(db_url)
+    %URI{query: query} = URI.parse(db_url)
 
     pool_size =
       (query || "")
@@ -105,7 +104,7 @@ defmodule Csv2sql.Database do
   end
 
   @spec insert_data_chunk(Csv2sql.File.t(), list) :: :ok
-  def insert_data_chunk(~M{%Csv2sql.File name, path, column_types}, data_chunk) do
+  def insert_data_chunk(%Csv2sql.File{name: name, path: path, column_types: column_types}, data_chunk) do
     encoded_data_chunk = encode_data_chunk(column_types, data_chunk)
     repo = Helpers.get_config(:db_type) |> get_repo()
 

@@ -17,7 +17,7 @@ defmodule Csv2sql.TypeDeducerTest do
       Application.put_env(
         :csv2sql,
         :config,
-        ~M{%Csv2sql.Config default_config | datetime_patterns, varchar_limit: 120}
+        %{default_config | datetime_patterns: datetime_patterns, varchar_limit: 120}
       )
 
       col_type_defs = [

@@ -72,12 +72,12 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_event("page-change", ~m{page}, socket) do
-    {:noreply, assign(socket, ~M{page})}
+  def handle_event("page-change", %{"page" => page}, socket) do
+    {:noreply, assign(socket, %{page: page})}
   end
 
   @impl true
-  def handle_event("open-modal", ~m{modal}, socket) do
+  def handle_event("open-modal", %{"modal" => modal}, socket) do
     {:noreply, assign(socket, :modal, modal)}
   end
 
@@ -105,7 +105,7 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_event("add-new-" <> field, _attrs, ~M{assigns} = socket)
+  def handle_event("add-new-" <> field, _attrs, %{assigns: assigns} = socket)
       when field in ~w[db-attr date-pattern date-time-pattern] do
     new_field =
       field
@@ -134,7 +134,7 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_event("remove-" <> field, ~m{attrid}, ~M{assigns} = socket)
+  def handle_event("remove-" <> field, %{"attrid" => attrid}, %{assigns: assigns} = socket)
       when field in ~w[db-attr date-pattern date-time-pattern] do
     association = "#{field}s" |> String.replace("-", "_") |> String.to_atom()
 
@@ -188,7 +188,7 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_info(:check_db_connection, ~M{assigns} = socket) do
+  def handle_info(:check_db_connection, %{assigns: assigns} = socket) do
     with(
       db_url = create_db_url(assigns.changeset.changes, hide_password: false),
       true <- not ("NA" == db_url),
@@ -217,7 +217,7 @@ defmodule DashboardWeb.Live.MainLive do
     do: {:noreply, assign(socket, db_connection_established: true)}
 
   @impl true
-  def handle_info({:error, _}, ~M{assigns} = socket) do
+  def handle_info({:error, _}, %{assigns: assigns} = socket) do
     {:noreply,
      assign(
        socket,
@@ -346,7 +346,7 @@ defmodule DashboardWeb.Live.MainLive do
     end
   end
 
-  defp db_connection_checker(~M{assigns} = socket, args) do
+  defp db_connection_checker(%{assigns: assigns} = socket, args) do
     if db_config_updated?(assigns, args) do
       if assigns.db_connection_debouncer,
         do: Process.cancel_timer(assigns.db_connection_debouncer)
@@ -358,7 +358,7 @@ defmodule DashboardWeb.Live.MainLive do
     end
   end
 
-  defp db_config_updated?(~M{changeset}, args) do
+  defp db_config_updated?(%{changeset: changeset}, args) do
     # TODO: Take into account custom db params
     Ecto.Changeset.get_field(changeset, :db_type) != Map.get(args, "db_type") ||
       Ecto.Changeset.get_field(changeset, :db_username) != Map.get(args, "db_username") ||
@@ -367,7 +367,7 @@ defmodule DashboardWeb.Live.MainLive do
       Ecto.Changeset.get_field(changeset, :db_name) != Map.get(args, "db_name")
   end
 
-  defp update_matching_date_time(~M{assigns} = socket, attrs \\ %{}) do
+  defp update_matching_date_time(%{assigns: assigns} = socket, attrs \\ %{}) do
     date_time_sample =
       get_in(attrs, ["config", "date_time_trial"]) ||
         Ecto.Changeset.get_field(assigns.changeset, :date_time_trial)

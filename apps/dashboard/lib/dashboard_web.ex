@@ -50,7 +50,6 @@ defmodule DashboardWeb do
 
       unquote(view_helpers())
 
-      import ShorterMaps
       import DashboardWeb.LiveHelpers
       import DashboardWeb.Live.UI
       alias DashboardWeb.Live.IconSvg
@@ -64,7 +63,6 @@ defmodule DashboardWeb do
 
       unquote(view_helpers())
 
-      import ShorterMaps
       import DashboardWeb.LiveHelpers
       import DashboardWeb.Live.UI
       alias DashboardWeb.Live.IconSvg
@@ -78,7 +76,6 @@ defmodule DashboardWeb do
 
       unquote(view_helpers())
 
-      import ShorterMaps
       import DashboardWeb.LiveHelpers
       import DashboardWeb.Live.UI
       alias DashboardWeb.Live.IconSvg
