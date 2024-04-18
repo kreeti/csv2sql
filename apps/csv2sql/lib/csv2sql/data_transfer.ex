@@ -11,9 +11,11 @@ defmodule Csv2sql.DataTransfer do
     Helpers.print_msg("Begin data tranfer for file: " <> Path.basename(file))
 
     insertion_chunk_size = Application.get_env(:csv2sql, Csv2sql.get_repo())[:insertion_chunk_size]
+    bom = :unicode.encoding_to_bom(:utf8)
 
     file
     |> File.stream!([:trim_bom])
+    |> Stream.map(&String.replace_prefix(&1, bom, ""))
     |> CSV.parse_stream()
     |> Stream.chunk_every(insertion_chunk_size)
     |> Enum.each(fn data_chunk ->
