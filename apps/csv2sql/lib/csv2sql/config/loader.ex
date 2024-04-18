@@ -111,7 +111,7 @@ defmodule Csv2sql.Config.Loader do
 
     db_url =
       if args[:db_url],
-        do: "ecto://#{args[:db_url]}",
+        do: args[:db_url],
         else: raise("Please provide a valid database url")
 
     varchar_limit = get_varchar_limit(args)
@@ -162,8 +162,7 @@ defmodule Csv2sql.Config.Loader do
 
   defp get_schema_infer_chunk_size(_), do: @schema_infer_chunk_size
 
-  defp get_db_type(~M{db_type}) when is_binary(db_type),
-    do: db_type |> strip_string() |> get_db_type()
+  defp get_db_type(~M{db_type}), do: db_type |> to_string() |> strip_string() |> get_db_type()
 
   defp get_db_type("mysql"), do: :mysql
   defp get_db_type("postgres"), do: :postgres

@@ -1,4 +1,9 @@
 defmodule Csv2sql.ProgressTracker do
+   @moduledoc """
+    This module is responsible for tracking the progress of the operations on different csv files.
+    The various processes working on the csv files can update the progress tracker with the status of the file.
+  """
+
   use GenServer
   use Csv2sql.Types
   alias Csv2sql.ProgressTracker.State
@@ -42,45 +47,54 @@ defmodule Csv2sql.ProgressTracker do
 
   # === Callbacks ===
 
-  @spec init(any) :: {:ok, State.t()}
+  @impl true
   def init(_),
-    do: {:ok, %State{start_time: DateTime.utc_now()}}
+    do: {:ok, %State{start_time: nil}}
 
+  @impl true
   def handle_call(:get_state, _from, state), do: {:reply, state, state}
 
+  @impl true
   def handle_call({:init_files, files}, _from, %State{} = state) do
     state =
       if files == [] do
         ~M{%State state | status: :finish, end_time: DateTime.utc_now()}
       else
         files = Enum.into(files, %{}, fn ~M{%Csv2sql.File path} = file -> {path, file} end)
-        ~M{%State state | files, status: :working}
+        ~M{%State state | files, status: :working, start_time: DateTime.utc_now()}
       end
 
     {:reply, files, state}
   end
 
+  @impl true
   def handle_call(:add_subscriber, {caller_pid, _ref_tag}, ~M{%State subscribers} = state),
     do: {:reply, :ok, %State{state | subscribers: [caller_pid | subscribers]}}
 
+  @impl true
   def handle_call({:report_error, _error}, _from, ~M{%State status: :error} = state),
     do: {:reply, :already_errored, state}
 
+  @impl true
   def handle_call({:report_error, error}, _from, ~M{%State subscribers} = state) do
     Enum.each(subscribers, fn subscriber -> Process.send(subscriber, {:error, error}, []) end)
     {:reply, :ok, %State{state | status: {:error, error}}}
   end
 
+  @impl true
   def handle_cast({:update_file, _file}, ~M{%State status: :error} = state), do: {:noreply, state}
 
+  @impl true
   def handle_cast({:update_file, ~M{%Csv2sql.File path} = file}, ~M{%State files} = state) do
     {_old_file, files} = Map.get_and_update!(files, path, fn old_file -> {old_file, file} end)
     {:noreply, ~M{%State state | files}}
   end
 
+  @impl true
   def handle_cast({:update_row_count, _path, _rows_inserted}, ~M{%State status: :error} = state),
     do: {:noreply, state}
 
+  @impl true
   def handle_cast({:update_row_count, path, rows_inserted}, ~M{%State files, subscribers} = state) do
     {_current_value, files} =
       Map.get_and_update!(files, path, fn ~M{%Csv2sql.File row_count, rows_processed} = file ->

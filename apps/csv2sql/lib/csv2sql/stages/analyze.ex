@@ -30,10 +30,26 @@ defmodule Csv2sql.Stages.Analyze do
       )
       |> Flow.map(&process_file/1)
       |> Flow.run()
+
+     wait_for_finish()
     catch
       _, reason ->
         Csv2sql.ProgressTracker.report_error(reason)
         throw(reason)
+    end
+  end
+
+  defp wait_for_finish() do
+    Csv2sql.ProgressTracker.get_state().status
+    |> case do
+      status when status in [:finish] ->
+        :done
+
+      {:error, reason} ->
+        IO.inspect("Error #{inspect(reason)}")
+        reason
+      _ ->
+        wait_for_finish()
     end
   end
 

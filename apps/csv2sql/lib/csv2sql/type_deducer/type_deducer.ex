@@ -21,9 +21,12 @@ defmodule Csv2sql.TypeDeducer do
       # Don't crash if linked flow process crashes
       Process.flag(:trap_exit, true)
 
+      bom = :unicode.encoding_to_bom(:utf8)
+
       [{row_count, column_type_map}] =
         csv_file_path
         |> File.stream!([:trim_bom, read_ahead: @csv_read_ahead])
+        |> Stream.map(&String.replace_prefix(&1, bom, ""))
         |> CSV.parse_stream()
         |> Stream.chunk_every(Helpers.get_config(:schema_infer_chunk_size))
         # By default Flow work with batches of 500 items that is 500 chunks in this case

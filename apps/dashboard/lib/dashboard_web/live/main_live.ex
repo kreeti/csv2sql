@@ -13,7 +13,7 @@ defmodule DashboardWeb.Live.MainLive do
     local_storage_config = (get_connect_params(socket) || %{}) |> Map.get("localConfig", %{})
 
     local_storage_config =
-      for {key, val} <- local_storage_config, into: %{}, do: {String.to_existing_atom(key), val}
+      for {key, val} <- local_storage_config, into: %{}, do: {String.to_atom(key), val}
 
     # Check for DB connection on config load from local storage
     timer_ref = Process.send_after(self(), :check_db_connection, @debounce_time)
@@ -27,8 +27,35 @@ defmodule DashboardWeb.Live.MainLive do
        db_connection_established: false,
        changeset: Config.get_defaults() |> Map.merge(local_storage_config) |> Config.changeset(),
        matching_date_time: nil,
-       constraints: Csv2sql.Config.Loader.get_constraints()
+       constraints: Csv2sql.Config.Loader.get_constraints(),
+       time_spend: 0,
+       state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}
      )}
+  end
+
+  @impl true
+  def handle_event("start", _unsigned_params, socket) do
+    if socket.assigns.changeset.valid? do
+      Csv2sql.ProgressTracker.add_subscriber()
+
+      Task.start(fn ->
+        socket.assigns.changeset
+        |> prepare_args()
+        |> Csv2sql.Config.Loader.load()
+
+        Csv2sql.Stages.Analyze.analyze_files()
+      end)
+
+      Process.send_after(self(), :updated_state, 200)
+    end
+
+    {:noreply, assign(socket, state: Csv2sql.ProgressTracker.get_state())}
+  end
+
+  @impl true
+  def handle_event("reset", _unsigned_params, socket) do
+    {:noreply,
+     assign(socket, state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}, time_spend: 0)}
   end
 
   @impl true
@@ -116,9 +143,41 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
+  def handle_info(:finish, socket) do
+    {:noreply, assign(socket, state: Csv2sql.ProgressTracker.get_state())}
+  end
+
+  @impl true
+  def handle_info(:updated_state, socket) do
+    state = Csv2sql.ProgressTracker.get_state()
+
+    time_taken =
+      DateTime.utc_now()
+      |> Time.diff(state.start_time, :millisecond)
+      |> Kernel./(1000)
+      |> Float.round()
+
+    state.status
+    |> case do
+      status when status in [:finish] ->
+        :finish
+
+      {:error, reason} ->
+        IO.inspect("Error #{inspect(reason)}")
+        reason
+
+      _ ->
+        Process.send_after(self(), :updated_state, 200)
+        :working
+    end
+
+    {:noreply, assign(socket, state: state, time_spend: time_taken)}
+  end
+
+  @impl true
   def handle_info(:check_db_connection, ~M{assigns} = socket) do
     with(
-      db_url = create_db_url(assigns.changeset.changes, false),
+      db_url = create_db_url(assigns.changeset.changes, hide_password: false),
       true <- not ("NA" == db_url),
       db_type <- Ecto.Changeset.get_field(assigns.changeset, :db_type),
       false <- is_nil(db_type),
@@ -160,9 +219,62 @@ defmodule DashboardWeb.Live.MainLive do
       "config" ->
         ConfigLive.config_page(assigns)
 
-      "start" ->
+      page when page in ["start", "reset"] ->
         ~H"""
-        Placeholder
+        <div>
+          <%= cond do %>
+           <% @state.status not in [:init, :working, :finish] -> %>
+            <% {:error, reason} = @state.status %>
+            <h2 class="text-center mb-4 mt-2">Errors! <%= inspect(reason)%> </h2>
+            <div class="w-100 d-flex justify-content-center align-items-center">
+            <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
+            </div>
+
+           <% @state.status == :init and @changeset.valid? -> %>
+            <h2 class="text-center mb-4 mt-2">Start Parse</h2>
+            <div class="w-100 d-flex justify-content-center align-items-center">
+            <button class="btn btn-primary px-4 text-center" phx-click="start">Start</button>
+            </div>
+
+          <% not @changeset.valid? -> %>
+           <%= inspect(@changeset)%>
+           <h2 class="text-center mb-4 mt-2">Errors in config, please check</h2>
+
+          <% @state.status == :finish -> %>
+            <h2 class="text-center mb-4 mt-2">Finished! Reset</h2>
+            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
+              <strong> Total time taken: </strong> <%= @time_spend %> seconds
+              <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
+            </div>
+
+          <% true -> %>
+            <h2 class="text-center mb-4 mt-2">Working!</h2>
+            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
+              <strong> Time Elapsed: </strong> <%= @time_spend %> seconds
+            </div>
+          <% end %>
+
+          <table class = "table w-75 m-2 table-bordered border-dark">
+            <tr>
+              <th> File name </th>
+              <th> size </th>
+              <th> row_count </th>
+              <th> rows_processed </th>
+              <th> status </th>
+            </tr>
+            <tr :for={file <- Map.values(@state.files)}>
+              <td>
+                <div><%= file.name %> </div>
+                <div><a href={"file:///#{file.path}"} target="_blank"><%= file.path %></a></div>
+              </td>
+              <td> <%= file.size %> </td>
+              <td> <%= file.row_count %> </td>
+              <td> <%= file.rows_processed %> </td>
+              <td> <%= file.status %> </td>
+            </tr>
+
+          </table>
+        </div>
         """
 
       "about" ->
@@ -209,5 +321,37 @@ defmodule DashboardWeb.Live.MainLive do
       false ->
         assign(socket, matching_date_time: nil)
     end
+  end
+
+  defp prepare_args(changeset) do
+    config = Ecto.Changeset.apply_changes(changeset)
+
+    %{
+      source_directory: config.source_directory,
+      schema_path: config.schema_path,
+      insert_schema: config.insert_schema,
+      insert_data: config.insert_data,
+      ordered: config.ordered,
+      date_patterns: prepare_date_patterns(config.date_patterns),
+      datetime_patterns: prepare_date_patterns(config.date_time_patterns),
+      schema_infer_chunk_size: config.schema_infer_chunk_size,
+      worker_count: config.worker_count,
+      parse_datetime: config.parse_datetime,
+      remove_illegal_characters: config.remove_illegal_characters,
+      db_type: config.db_type,
+      db_name: config.db_name,
+      db_url: create_db_url(changeset.changes),
+      drop_existing_tables: config.drop_existing_tables,
+      varchar_limit: config.varchar_limit,
+      db_worker_count: config.db_worker_count,
+      insertion_chunk_size: config.insertion_chunk_size,
+      log: config.log
+    }
+  end
+
+  defp prepare_date_patterns(date_patterns) do
+    date_patterns
+    |> Enum.reject(&is_nil(&1.pattern))
+    |> Enum.map(&%{id: &1.id, pattern: &1.pattern})
   end
 end

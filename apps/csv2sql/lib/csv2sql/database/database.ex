@@ -9,6 +9,8 @@ defmodule Csv2sql.Database do
 
   @ordering_column_name "CSV_ORDERING_ID"
   @default_db_pool_size 20
+  @default_db_queue_target 5000
+  @default_db_queue_interval 1000
 
   # Public functions
   def start_repo() do
@@ -21,10 +23,24 @@ defmodule Csv2sql.Database do
       |> URI.decode_query()
       |> Map.get("pool_size", @default_db_pool_size)
 
+    queue_target =
+      (query || "")
+      |> URI.decode_query()
+      |> Map.get("queue_target", @default_db_queue_target)
+      |> IO.inspect()
+
+    queue_interval =
+      (query || "")
+      |> URI.decode_query()
+      |> Map.get("queue_interval", @default_db_queue_interval)
+      |> IO.inspect()
+
     repo.start_link(
       url: db_url,
       pool_size: pool_size,
-      log: Helpers.get_config(:log)
+      log: Helpers.get_config(:log),
+      queue_target: queue_target,
+      queue_interval: queue_interval
     )
   end
 
@@ -168,7 +184,7 @@ defmodule Csv2sql.Database do
       column_types,
       row,
       fn {header, type}, data ->
-        {header, encode(type, data)}
+        {header, encode(type, String.trim(data))}
       end
     )
   end
