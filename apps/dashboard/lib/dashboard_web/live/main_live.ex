@@ -29,33 +29,46 @@ defmodule DashboardWeb.Live.MainLive do
        matching_date_time: nil,
        constraints: Csv2sql.Config.Loader.get_constraints(),
        time_spend: 0,
-       state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}
+       state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil},
+       memory_usage: 0,
+       cpu_usage: 0
      )}
   end
 
   @impl true
-  def handle_event("start", _unsigned_params, socket) do
-    if socket.assigns.changeset.valid? do
-      Csv2sql.ProgressTracker.add_subscriber()
+  def handle_event("start", _unsigned_params, %{assigns: assigns} = socket) do
+    socket_state = assigns.state
 
-      Task.start(fn ->
-        socket.assigns.changeset
-        |> prepare_args()
-        |> Csv2sql.Config.Loader.load()
+    cond do
+      assigns.changeset.valid? and socket_state.status == :init ->
+        Csv2sql.ProgressTracker.add_subscriber()
 
-        Csv2sql.Stages.Analyze.analyze_files()
-      end)
+        Task.start(fn ->
+          socket.assigns.changeset
+          |> prepare_args()
+          |> Csv2sql.Config.Loader.load()
 
-      Process.send_after(self(), :updated_state, 200)
+          Csv2sql.Stages.Analyze.analyze_files()
+        end)
+
+        send(self(), :update_state)
+
+        {:noreply, socket}
+
+      socket_state.status == :working ->
+        {:noreply, socket}
+
+      true ->
+        Csv2sql.ProgressTracker.reset_state()
+
+        {:noreply,
+         assign(socket,
+           state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil},
+           time_spend: 0,
+           memory_usage: 0,
+           cpu_usage: 0
+         )}
     end
-
-    {:noreply, assign(socket, state: Csv2sql.ProgressTracker.get_state())}
-  end
-
-  @impl true
-  def handle_event("reset", _unsigned_params, socket) do
-    {:noreply,
-     assign(socket, state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}, time_spend: 0)}
   end
 
   @impl true
@@ -148,30 +161,30 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_info(:updated_state, socket) do
-    state = Csv2sql.ProgressTracker.get_state()
+  def handle_info(:update_state, socket) do
+    state = socket.assigns.state
 
     time_taken =
-      DateTime.utc_now()
-      |> Time.diff(state.start_time, :millisecond)
-      |> Kernel./(1000)
-      |> Float.round()
+      if is_nil(state.start_time) do
+        0
+      else
+        DateTime.utc_now()
+        |> Time.diff(state.start_time, :millisecond)
+        |> Kernel./(1000)
+        |> Float.round()
+      end
 
-    state.status
-    |> case do
-      status when status in [:finish] ->
-        :finish
-
-      {:error, reason} ->
-        IO.inspect("Error #{inspect(reason)}")
-        reason
-
-      _ ->
-        Process.send_after(self(), :updated_state, 200)
-        :working
+    if state.status in [:init, :working] do
+      Process.send_after(self(), :update_state, 200)
     end
 
-    {:noreply, assign(socket, state: state, time_spend: time_taken)}
+    {:noreply,
+     assign(socket,
+       state: Csv2sql.ProgressTracker.get_state(),
+       time_spend: time_taken,
+       cpu_usage: :cpu_sup.util() |> Float.round(2),
+       memory_usage: :erlang.memory(:total) |> Sizeable.filesize()
+     )}
   end
 
   @impl true
@@ -214,67 +227,116 @@ defmodule DashboardWeb.Live.MainLive do
      )}
   end
 
+  @impl true
+  def handle_info({:report_error, reason}, socket) do
+    IO.inspect("Reported Error #{inspect(reason)}")
+    {:noreply, socket}
+  end
+
+  def item_success_class(status) do
+    if status == :done, do: "list-group-item-success", else: ""
+  end
+
+  def error_status_class(status) do
+    if is_tuple(status), do: "error-status", else: ""
+  end
+
+  def spinner_loading_class(status) do
+    if status == :working, do: "spinner loading", else: ""
+  end
+
   defp render_page(assigns) do
     case assigns.page do
       "config" ->
         ConfigLive.config_page(assigns)
 
-      page when page in ["start", "reset"] ->
+      "start" ->
         ~H"""
-        <div>
-          <%= cond do %>
-           <% @state.status not in [:init, :working, :finish] -> %>
-            <% {:error, reason} = @state.status %>
-            <h2 class="text-center mb-4 mt-2">Errors! <%= inspect(reason)%> </h2>
-            <div class="w-100 d-flex justify-content-center align-items-center">
-            <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
+        <div class="main-container">
+          <div class="current-stats">
+            <div>
+              <strong> Status: </strong>
+              <span class={"overall-status #{error_status_class(@state.status)}"}>
+                <%= if is_tuple(@state.status) do %>
+                  Error! check logs
+                <% else %>
+                  <%= @state.status %>
+                <% end %>
+              </span>
             </div>
+            <%= if @state.status != :init do %>
+              <div><strong> Total Files: </strong><%= Enum.count(Map.values(@state.files)) %> </div>
+              <div><strong> Files Imported: </strong><%= Enum.count(Map.values(@state.files), fn %{status: status} -> status == :done end) %> </div>
+              <div><strong> CPU Usage: </strong> <%= @cpu_usage %>% </div>
+              <div><strong> Memory Usage of Application: </strong>  <%= @memory_usage %></div>
+              <div><strong> Time Elapsed: </strong> <%= @time_spend %> seconds </div>
+            <% end %>
+          </div>
 
-           <% @state.status == :init and @changeset.valid? -> %>
-            <h2 class="text-center mb-4 mt-2">Start Parse</h2>
-            <div class="w-100 d-flex justify-content-center align-items-center">
-            <button class="btn btn-primary px-4 text-center" phx-click="start">Start</button>
-            </div>
+          <div class="file-list list-group">
 
-          <% not @changeset.valid? -> %>
-           <%= inspect(@changeset)%>
-           <h2 class="text-center mb-4 mt-2">Errors in config, please check</h2>
+            <%= Enum.map Map.values(@state.files), fn %{name: name, path: path, size: size, row_count: row_count, rows_processed: rows_processed, status: status} -> %>
+              <div class={"file-list-item list-group-item list-group-item-action #{item_success_class(status)} "}>
+                <%= if status == :done do %>
+                <i class="fa fa-check-circle fa-2x finish-check" aria-hidden="true"></i>
+                <% end %>
+                <span class="file-name"> <strong> Name: </strong>
+                  <%= name %>
+                </span>
+                <span class="file-path"> <strong> Path: </strong> <a href={"file:///#{path}"} target="_blank">
+                    <%= path %>
+                  </a> </span>
+                <span class="file-size"> <strong> Size: </strong>
+                  <%= size %>
+                </span>
+                <span class="row_count"> <strong> Total Number of Records: </strong>
+                  <%= row_count %>
+                </span>
+                <span>
+                  <strong class="status"> Status: </strong>
+                  <%= case status do %>
+                    <% :pending -> %> <span class="stage_pending"> Pending </span>
 
-          <% @state.status == :finish -> %>
-            <h2 class="text-center mb-4 mt-2">Finished! Reset</h2>
-            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
-              <strong> Total time taken: </strong> <%= @time_spend %> seconds
-              <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
-            </div>
+                    <% :analyze -> %> <span class="stage_infer_schema"> Infering Schema </span>
 
-          <% true -> %>
-            <h2 class="text-center mb-4 mt-2">Working!</h2>
-            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
-              <strong> Time Elapsed: </strong> <%= @time_spend %> seconds
-            </div>
-          <% end %>
+                    <% :loading -> %>
+                      <span class="stage_insert_data"> Inserting Data </span>
+                      <span class="records_inserted"> <strong> Record Inserted: </strong>
+                        <%= rows_processed %>
+                      </span>
+                      <div class="progress">
+                        <% percentage_progress=if(row_count==0, do: 100, else: (rows_processed / row_count) * 100) %>
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                          role="progressbar" style={"width: #{percentage_progress}"}>
+                          <span class="progress-percentage justify-content-center d-flex position-absolute w-100">
+                            <%= Float.round(percentage_progress * 1.0 , 2) %>%
+                          </span>
+                        </div>
+                      </div>
 
-          <table class = "table w-75 m-2 table-bordered border-dark">
-            <tr>
-              <th> File name </th>
-              <th> size </th>
-              <th> row_count </th>
-              <th> rows_processed </th>
-              <th> status </th>
-            </tr>
-            <tr :for={file <- Map.values(@state.files)}>
-              <td>
-                <div><%= file.name %> </div>
-                <div><a href={"file:///#{file.path}"} target="_blank"><%= file.path %></a></div>
-              </td>
-              <td> <%= file.size %> </td>
-              <td> <%= file.row_count %> </td>
-              <td> <%= file.rows_processed %> </td>
-              <td> <%= file.status %> </td>
-            </tr>
+                    <% :done -> %> <span class="stage_finished"> Finisihed </span>
+                  <% end %>
+                </span>
+              </div>
+            <% end %>
 
-          </table>
+          </div>
+
         </div>
+        <footer class="main-footer fixed-bottom">
+          <div class="container" phx-click="start">
+            <div id="divSpinner" class={spinner_loading_class(@state.status)} >
+              <div id="spinnerText">
+              <%= cond do %>
+                <% @state.status == :init -> %> <span> Start!</span>
+                <% @state.status == :working -> %> <span> Working.. </span>
+                <% @state.status == :finish -> %> <span> Finished!  Reset? </span>
+                <% true -> %> <span id="error_stage"> ERROR! Reset?</span>
+              <% end %>
+              </div>
+            </div>
+          </div>
+        </footer>
         """
 
       "about" ->

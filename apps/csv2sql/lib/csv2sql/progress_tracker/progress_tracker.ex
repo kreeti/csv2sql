@@ -1,5 +1,5 @@
 defmodule Csv2sql.ProgressTracker do
-   @moduledoc """
+  @moduledoc """
     This module is responsible for tracking the progress of the operations on different csv files.
     The various processes working on the csv files can update the progress tracker with the status of the file.
   """
@@ -22,6 +22,10 @@ defmodule Csv2sql.ProgressTracker do
       # Timeout is infinity here makes the caller wait until the genserver responds
       do: GenServer.call(__MODULE__, :get_state, :infinity),
       else: nil
+  end
+
+  def reset_state() do
+    GenServer.cast(__MODULE__, :reset_state)
   end
 
   # Update file
@@ -77,8 +81,15 @@ defmodule Csv2sql.ProgressTracker do
 
   @impl true
   def handle_call({:report_error, error}, _from, ~M{%State subscribers} = state) do
-    Enum.each(subscribers, fn subscriber -> Process.send(subscriber, {:error, error}, []) end)
+    Enum.each(subscribers, fn subscriber -> Process.send(subscriber, {:report_error, error}, []) end)
     {:reply, :ok, %State{state | status: {:error, error}}}
+  end
+
+  @impl true
+  def handle_cast(:reset_state, state) do
+    files = %{}
+
+    {:noreply, ~M{%State state | files, status: :init, start_time: nil, end_time: nil}}
   end
 
   @impl true
@@ -111,7 +122,7 @@ defmodule Csv2sql.ProgressTracker do
         end_time = DateTime.utc_now()
         Enum.each(subscribers, fn subscriber -> Process.send(subscriber, :finish, []) end)
 
-        ~M{%State state | status: :finish, files, end_time}
+        ~M{%State state | status: :finish, subscribers: [], files, end_time}
       else
         ~M{%State state | files}
       end
