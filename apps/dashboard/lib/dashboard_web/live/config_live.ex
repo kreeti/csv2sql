@@ -21,7 +21,7 @@ defmodule DashboardWeb.Live.ConfigLive do
             form={@form}
             id="source_directory_config"
             title="Source directory"
-            tooltip="TODO: popup title"
+            tooltip="The source directory where the csvs are located, Example: /home/user/Desktop/csvs"
             required_input={true}
             placeholder="CSV source directory path"
           >
@@ -42,7 +42,7 @@ defmodule DashboardWeb.Live.ConfigLive do
             form={@form}
             id="schema_path_config"
             title="Schema file path"
-            tooltip="TODO: popup title"
+            tooltip="The path were the generated schema file will be created, defaults to the csv source directory, Example: /home/user/Desktop/schema"
             placeholder="Schema file path"
           >
             <:input let={@form}>
@@ -59,7 +59,7 @@ defmodule DashboardWeb.Live.ConfigLive do
             form={@form}
             id="worker_count_config"
             title="Worker Count"
-            tooltip="TODO: popup title"
+            tooltip="The number of workers used. Increasing worker count may result in better performance but may lead to errors, decreasing worker count to 1 means, csv2sql will process one file at a time. The number of workers is directly related to the number of files processed simultaneously."
             placeholder="Worker count"
           >
             <:input let={@form}>
@@ -78,7 +78,9 @@ defmodule DashboardWeb.Live.ConfigLive do
             form={@form}
             id="schema_infer_chunk_size"
             title="Chunk Size"
-            tooltip="TODO: popup title"
+            tooltip="The chunk size to use when the schema for a csv will be infered parallely .
+            For example: A chunk size 100 means the csv will be read 100 rows at a time
+            and separate processes will be used to infer the schema of each 100 row chunk"
             placeholder="Chunk Size"
           >
             <:input let={@form}>
@@ -147,7 +149,7 @@ defmodule DashboardWeb.Live.ConfigLive do
               class="pb-0"
               title="DB Type"
               required_input={true}
-              tooltip="TODO: popup title"
+              tooltip="Set wether to use MySQL or PostgreSQL"
             >
               <:input let={@form}>
                 <div class="d-flex flex-column">
@@ -218,7 +220,7 @@ defmodule DashboardWeb.Live.ConfigLive do
                 id="db_name_config"
                 class="pb-0"
                 title="Database name"
-                tooltip="TODO: popup title"
+                tooltip="This is the name of the database which will be created (if not present already), required field if database access is required"
                 required_input={true}
                 placeholder="Database name"
               >
@@ -231,7 +233,7 @@ defmodule DashboardWeb.Live.ConfigLive do
                 form={@form}
                 id="db_host_config"
                 title="Database Host"
-                tooltip="TODO: popup title"
+                tooltip="database host, required field if database access is required"
                 required_input={true}
                 placeholder="Database host"
               >
@@ -246,7 +248,7 @@ defmodule DashboardWeb.Live.ConfigLive do
                 form={@form}
                 id="db_username_config"
                 title="Database username"
-                tooltip="TODO: popup title"
+                tooltip="database username, required field if database access is required"
                 required_input={true}
                 placeholder="Database username"
               >
@@ -262,7 +264,7 @@ defmodule DashboardWeb.Live.ConfigLive do
                 form={@form}
                 id="db_password_config"
                 title="Database password"
-                tooltip="TODO: popup title"
+                tooltip="database password, required field if database access is required"
                 required_input={true}
                 placeholder="Database password"
               >
@@ -290,7 +292,7 @@ defmodule DashboardWeb.Live.ConfigLive do
               id="varchar_limit_config"
               class="pb-0"
               title="Varchar size"
-              tooltip="TODO: popup title"
+              tooltip="The character limit after which a db field becomes a text from a varchar"
               placeholder="Varchar size"
             >
               <:input let={@form}>
@@ -310,7 +312,7 @@ defmodule DashboardWeb.Live.ConfigLive do
               id="db_worker_count_config"
               class="pb-0"
               title="DB Worker Count"
-              tooltip="TODO: popup title"
+              tooltip="The number of database workers, the max number of processes writing to the database at once"
               placeholder="DB Worker count"
             >
               <:input let={@form}>
@@ -329,7 +331,7 @@ defmodule DashboardWeb.Live.ConfigLive do
               form={@form}
               id="insertion_chunk_size_config"
               title="Insertion Chunk Size"
-              tooltip="TODO: popup title"
+              tooltip="number of records to insert into the database at once Increasing this may result in database errors for too many placeholders"
               placeholder="Insertion Chunk Size"
             >
               <:input let={@form}>

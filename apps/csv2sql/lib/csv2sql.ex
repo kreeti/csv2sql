@@ -1,18 +1,6 @@
 defmodule Csv2sql do
   require Logger
 
-  @spec main([binary]) :: :ok
-  def main(args) do
-    case Csv2sql.Config.Parser.parse(args) do
-      {:cont, parsed} ->
-        Csv2sql.Config.Loader.load(parsed)
-        Csv2sql.Stages.Analyze.analyze_files()
-
-      {:stop, text} ->
-        Logger.info(text)
-    end
-  end
-
   # For testing
   @spec start() :: :ok
   def start() do
