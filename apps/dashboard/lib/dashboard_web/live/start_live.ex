@@ -8,10 +8,15 @@ defmodule DashboardWeb.Live.StartLive do
         <div>
           <strong> Status: </strong>
           <span class={"overall-status #{error_status_class(@state.status)}"}>
-            <%= if is_tuple(@state.status) do %>
-              Error! check logs
-            <% else %>
-              <%= @state.status %>
+            <%= cond do %>
+              <% not @changeset.valid? -> %>
+                Invalid Configurations!
+
+              <% is_tuple(@state.status) -> %>
+                Error! check logs
+
+              <% true -> %>
+                <%= @state.status %>
             <% end %>
           </span>
         </div>
@@ -75,7 +80,7 @@ defmodule DashboardWeb.Live.StartLive do
 
     </div>
     <footer class="main-footer fixed-bottom">
-      <div class="container" phx-click="start">
+      <div class={"container #{button_class(@changeset)}"} phx-click="start">
         <div id="divSpinner" class={spinner_loading_class(@state.status)} >
           <div id="spinnerText">
           <%= cond do %>
@@ -103,4 +108,7 @@ defmodule DashboardWeb.Live.StartLive do
     if status == :working, do: "spinner loading", else: ""
   end
 
+  defp button_class(changeset) do
+    if not changeset.valid?, do: "button-disabled", else: "button-enabled"
+  end
 end

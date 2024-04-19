@@ -7,4 +7,9 @@ defmodule DashboardWeb.LiveHelpers do
     do: %{class: "nav-link active", "aria-current": "page"}
 
   def get_nav_item_attrs(_assigns, _curr_page), do: %{class: "nav-link bg-light-grey"}
+
+  def get_config_item_attrs(status) when status != :working,
+    do: %{"phx-click" => "page-change", "phx-value-page" => "config"}
+
+  def get_config_item_attrs(_status), do: %{}
 end

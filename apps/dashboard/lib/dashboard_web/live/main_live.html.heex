@@ -8,7 +8,7 @@
     <div class="nav-header">CSV2SQL</div>
   </section>
   <ul class="custom-navbar nav nav-tabs nav-justified">
-    <li class="nav-item" role="button" phx-click="page-change" phx-value-page="config">
+    <li class="nav-item" role="button" {get_config_item_attrs(@state.status)}>
       <a {get_nav_item_attrs(assigns, "config")} href="#">
         <div class="grow">
           <IconSvg.settings /> Change Configuration

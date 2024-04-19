@@ -4,7 +4,7 @@ defmodule DashboardWeb.Live.MainLive do
   alias DashBoard.Config
   alias DashBoard.DbAttribute
   alias Csv2sql.Database.ConnectionTest
-  alias DashboardWeb.Live.{ConfigLive, StartLive}
+  alias DashboardWeb.Live.{ConfigLive, StartLive, AboutLive}
 
   @debounce_time 1000
 
@@ -242,9 +242,7 @@ defmodule DashboardWeb.Live.MainLive do
         StartLive.start_page(assigns)
 
       "about" ->
-        ~H"""
-        About
-        """
+        AboutLive.about_page(assigns)
     end
   end
 
