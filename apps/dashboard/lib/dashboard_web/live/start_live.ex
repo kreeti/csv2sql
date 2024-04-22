@@ -33,9 +33,6 @@ defmodule DashboardWeb.Live.StartLive do
 
         <%= Enum.map Map.values(@state.files), fn %{name: name, path: path, size: size, row_count: row_count, rows_processed: rows_processed, status: status} -> %>
           <div class={"file-list-item list-group-item list-group-item-action #{item_success_class(status)} "}>
-            <%= if status == :done do %>
-            <i class="fa fa-check-circle fa-2x finish-check" aria-hidden="true"></i>
-            <% end %>
             <span class="file-name"> <strong> Name: </strong>
               <%= name %>
             </span>
