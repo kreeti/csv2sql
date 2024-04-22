@@ -26,6 +26,10 @@ defmodule Csv2sql.ProgressTracker do
     GenServer.cast(__MODULE__, :reset_state)
   end
 
+  def check_files_status() do
+    GenServer.cast(__MODULE__, :check_files_status)
+  end
+
   # Update file
   @spec update_file(Csv2sql.File.t()) :: :ok
   def update_file(file),
@@ -109,7 +113,7 @@ defmodule Csv2sql.ProgressTracker do
   @impl true
   def handle_cast(
         {:update_row_count, path, rows_inserted},
-        %State{files: files, subscribers: subscribers} = state
+        %State{files: files} = state
       ) do
     {_current_value, files} =
       Map.get_and_update!(files, path, fn
@@ -123,18 +127,28 @@ defmodule Csv2sql.ProgressTracker do
           {file, %{file | rows_processed: rows_processed, status: status}}
       end)
 
-    state =
-      files
-      |> Enum.all?(fn {_path, %Csv2sql.File{status: status}} -> status == :done end)
-      |> if do
-        end_time = DateTime.utc_now()
-        Enum.each(subscribers, fn subscriber -> Process.send(subscriber, :finish, []) end)
-
-        %{state | status: :finish, subscribers: [], files: files, end_time: end_time}
-      else
-        %{state | files: files}
-      end
+    state = check_files_status_and_update_state(files, state)
 
     {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast(:check_files_status, %State{files: files} = state) do
+    state = check_files_status_and_update_state(files, state)
+
+    {:noreply, state}
+  end
+
+  defp check_files_status_and_update_state(files, %State{subscribers: subscribers} = state) do
+    files
+    |> Enum.all?(fn {_path, %Csv2sql.File{status: status}} -> status == :done end)
+    |> if do
+      end_time = DateTime.utc_now()
+      Enum.each(subscribers, fn subscriber -> Process.send(subscriber, :finish, []) end)
+
+      %{state | status: :finish, subscribers: [], files: files, end_time: end_time}
+    else
+      %{state | files: files}
+    end
   end
 end

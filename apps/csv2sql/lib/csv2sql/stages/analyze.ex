@@ -49,6 +49,7 @@ defmodule Csv2sql.Stages.Analyze do
         reason
 
       _ ->
+        ProgressTracker.check_files_status()
         wait_for_finish()
     end
   end
@@ -104,21 +105,25 @@ defmodule Csv2sql.Stages.Analyze do
           |> Enum.join("\n")
 
         File.write(get_schema_path(), query, [:append])
+      end
 
-        if Helpers.get_config(:insert_data) do
-          # Start a producer for the file
-          {:ok, pid} = DbLoader.Producer.start_link(file)
+      if Helpers.get_config(:insert_data) do
+        # Start a producer for the file
+        {:ok, pid} = DbLoader.Producer.start_link(file)
 
-          # Subscribe consumers to the producer
-          GenStage.sync_subscribe(
-            DbLoader.ConsumerSupervisor,
-            cancel: :temporary,
-            min_demand: 0,
-            # Number of consumers loading data in database
-            max_demand: Helpers.get_config(:db_worker_count),
-            to: pid
-          )
-        end
+        # Subscribe consumers to the producer
+        GenStage.sync_subscribe(
+          DbLoader.ConsumerSupervisor,
+          cancel: :temporary,
+          min_demand: 0,
+          # Number of consumers loading data in database
+          max_demand: Helpers.get_config(:db_worker_count),
+          to: pid
+        )
+      else
+        file = %Csv2sql.File{file | status: :done}
+
+        ProgressTracker.update_file(file)
       end
     catch
       _, reason ->
