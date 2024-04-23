@@ -42,11 +42,11 @@ defmodule Csv2sql.Stages.Analyze do
     Csv2sql.ProgressTracker.get_state().status
     |> case do
       status when status in [:finish] ->
-        :done
+        :ok
 
       {:error, reason} ->
         IO.inspect("Error #{inspect(reason)}")
-        reason
+        :ok
 
       _ ->
         ProgressTracker.check_files_status()

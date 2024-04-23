@@ -91,11 +91,8 @@ defmodule Csv2sql.ProgressTracker do
   end
 
   @impl true
-  def handle_cast(:reset_state, state) do
-    files = %{}
-
-    {:noreply, %{state | files: files, status: :init, start_time: nil, end_time: nil}}
-  end
+  def handle_cast(:reset_state, state), do:
+    {:noreply, %{state | files: %{}, subscribers: [], status: :init, start_time: nil, end_time: nil}}
 
   @impl true
   def handle_cast({:update_file, _file}, %State{status: :error} = state), do: {:noreply, state}
@@ -146,7 +143,7 @@ defmodule Csv2sql.ProgressTracker do
       end_time = DateTime.utc_now()
       Enum.each(subscribers, fn subscriber -> Process.send(subscriber, :finish, []) end)
 
-      %{state | status: :finish, subscribers: [], files: files, end_time: end_time}
+      %{state | status: :finish, files: files, end_time: end_time}
     else
       %{state | files: files}
     end
