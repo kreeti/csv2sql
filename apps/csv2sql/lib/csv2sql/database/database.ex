@@ -121,7 +121,7 @@ defmodule Csv2sql.Database do
       {:ok, str, replaced} =
         Codepagex.to_string(str, :iso_8859_1, Codepagex.replace_nonexistent(""), 0)
 
-      # TODO: fix this can slow down things
+      # TODO: fix t his can slow down things
       if replaced > 0,
         do:
           Logger.warning("[#{Process.get(:file)}] Replaced #{replaced} characters in binary data")
@@ -130,6 +130,13 @@ defmodule Csv2sql.Database do
     else
       str
     end
+  end
+
+  @spec string_column_type(non_neg_integer()) :: :text | {:varchar, non_neg_integer()}
+  def string_column_type(max_data_length) do
+    if max_data_length > varchar_limit(),
+      do: :text,
+      else: {:varchar, max_data_length}
   end
 
   # Callbacks to implement

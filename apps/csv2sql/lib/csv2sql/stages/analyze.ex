@@ -136,7 +136,7 @@ defmodule Csv2sql.Stages.Analyze do
     %{size: size} = File.stat!(path)
     {row_count, column_types} = TypeDeducer.get_count_and_types(path)
 
-    %{file | size: size, row_count: row_count, column_types: column_types}
+    %{file | size: Sizeable.filesize(size), row_count: row_count, column_types: column_types}
   end
 
   defp is_csv?(filepath) do

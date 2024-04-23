@@ -67,7 +67,7 @@ defmodule DashboardWeb.Live.StartLive do
                     </div>
                   </div>
 
-                <% :done -> %> <span class="stage_finished"> Finisihed </span>
+                <% :done -> %> <span class="stage_finished"> Finished </span>
               <% end %>
             </span>
           </div>
