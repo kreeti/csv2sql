@@ -9,7 +9,8 @@ defmodule Csv2sql.Config.TypeCheckerTest do
     is_boolean: true,
     is_integer: true,
     is_float: true,
-    is_text: false
+    is_text: false,
+    max_data_length: 0
   }
 
   @date_patterns_to_tests [
@@ -60,7 +61,8 @@ defmodule Csv2sql.Config.TypeCheckerTest do
                  is_boolean: false,
                  is_integer: false,
                  is_float: false,
-                 is_text: false
+                 is_text: false,
+                 max_data_length: String.length(value)
                }
       end)
 
@@ -75,7 +77,8 @@ defmodule Csv2sql.Config.TypeCheckerTest do
                  is_boolean: false,
                  is_integer: false,
                  is_float: false,
-                 is_text: false
+                 is_text: false,
+                 max_data_length: String.length(value)
                }
       end)
     end
@@ -92,7 +95,8 @@ defmodule Csv2sql.Config.TypeCheckerTest do
                  is_boolean: false,
                  is_integer: false,
                  is_float: false,
-                 is_text: false
+                 is_text: false,
+                 max_data_length: String.length(value)
                }
       end)
     end
@@ -116,7 +120,8 @@ defmodule Csv2sql.Config.TypeCheckerTest do
                  is_boolean: false,
                  is_integer: false,
                  is_float: false,
-                 is_text: false
+                 is_text: false,
+                 max_data_length: String.length(value)
                }
       end)
 
@@ -131,7 +136,8 @@ defmodule Csv2sql.Config.TypeCheckerTest do
                  is_boolean: false,
                  is_integer: false,
                  is_float: false,
-                 is_text: false
+                 is_text: false,
+                 max_data_length: String.length(value)
                }
       end)
     end
@@ -150,7 +156,8 @@ defmodule Csv2sql.Config.TypeCheckerTest do
                    is_boolean: false,
                    is_integer: false,
                    is_float: false,
-                   is_text: false
+                   is_text: false,
+                   max_data_length: 0
                  }
         end
       )
@@ -225,15 +232,15 @@ defmodule Csv2sql.Config.TypeCheckerTest do
       Application.put_env(
         :csv2sql,
         :config,
-        ~M{%Csv2sql.Config default_config | varchar_limit: 10}
+        %{ default_config | varchar_limit: 10}
       )
 
       [
-        {"abc", false},
-        {"12345678901", true},
-        {"", false}
+        {"abc", 3},
+        {"12345678901", 11},
+        {"", 0}
       ]
-      |> run_assertions(:is_text)
+      |> run_assertions(:max_data_length)
     end
 
     # Private test helper functions
@@ -247,7 +254,7 @@ defmodule Csv2sql.Config.TypeCheckerTest do
       Application.put_env(
         :csv2sql,
         :config,
-        ~M{%Csv2sql.Config default_config | date_patterns, datetime_patterns}
+        %{default_config | date_patterns: date_patterns, datetime_patterns: datetime_patterns}
       )
     end
 
@@ -259,6 +266,9 @@ defmodule Csv2sql.Config.TypeCheckerTest do
 
         {value, false} ->
           refute Map.get(TypeChecker.check_type(value, @initial_type_map), key)
+
+        {value, number} ->
+          assert Map.get(TypeChecker.check_type(value, @initial_type_map), key) == number
       end)
     end
   end

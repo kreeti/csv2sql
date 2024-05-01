@@ -33,25 +33,24 @@ defmodule Csv2sql.MixProject do
     [
       {:nimble_csv, "~> 1.2"},
       {:myxql, "~> 0.6.4"},
-      {:postgrex, "~> 0.16.2"},
-      {:ecto, "~> 3.11"},
-      {:ecto_sql, "~> 3.11"},
+      {:postgrex, "~> 0.17.5"},
+      {:ecto, "~> 3.11.2"},
+      {:ecto_sql, "~> 3.11.1"},
       {:sizeable, "~> 1.0"},
-      {:shorter_maps, git: "https://github.com/boyzwj/shorter_maps.git"},
-      {:timex, "~> 3.7"},
+      {:timex, "~> 3.7.11"},
       {:typed_struct, "~> 0.3.0"},
-      {:flow, "~> 1.2"},
-      {:stream_split, "~> 0.1.0"},
+      {:flow, "~> 1.2.4"},
+      {:stream_split, "~> 0.1.7"},
       {:codepagex, "~> 0.1.6"},
       {:bakeware, "~> 0.2.4"},
 
       # For dev and/or test
       {:dotenv, github: "avdi/dotenv_elixir", only: [:test]},
-      {:benchee, "~> 1.1", only: :dev},
-      {:excoveralls, "~> 0.14.4", only: [:dev, :test]},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:mix_unused, "~> 0.3.0", only: [:dev, :test], runtime: false}
+      {:benchee, "~> 1.3.0", only: :dev},
+      {:excoveralls, "~> 0.18.1", only: [:dev, :test]},
+      {:credo, "~> 1.7.2", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4.3", only: [:dev, :test], runtime: false},
+      {:mix_unused, "~> 0.4.1", only: [:dev, :test], runtime: false}
     ]
   end
 

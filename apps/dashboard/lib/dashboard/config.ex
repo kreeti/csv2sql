@@ -9,7 +9,6 @@ end
 defmodule DashBoard.Config do
   use Ecto.Schema
   import Ecto.Changeset
-  import ShorterMaps
 
   @primary_key false
   embedded_schema do
@@ -84,7 +83,7 @@ defmodule DashBoard.Config do
     Enum.reduce(
       constants,
       changeset,
-      fn {key, ~M{min, max}}, changeset ->
+      fn {key, %{min: min, max: max}}, changeset ->
         validate_number(
           changeset,
           key,

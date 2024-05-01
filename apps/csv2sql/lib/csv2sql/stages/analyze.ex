@@ -1,7 +1,6 @@
 defmodule Csv2sql.Stages.Analyze do
   use Csv2sql.Types
   alias Csv2sql.{TypeDeducer, Database, DbLoader, ProgressTracker, Helpers}
-  import ShorterMaps
 
   @spec analyze_files :: :ok
   def analyze_files do
@@ -31,7 +30,7 @@ defmodule Csv2sql.Stages.Analyze do
       |> Flow.map(&process_file/1)
       |> Flow.run()
 
-     wait_for_finish()
+      wait_for_finish()
     catch
       _, reason ->
         Csv2sql.ProgressTracker.report_error(reason)
@@ -43,12 +42,14 @@ defmodule Csv2sql.Stages.Analyze do
     Csv2sql.ProgressTracker.get_state().status
     |> case do
       status when status in [:finish] ->
-        :done
+        :ok
 
       {:error, reason} ->
         IO.inspect("Error #{inspect(reason)}")
-        reason
+        :ok
+
       _ ->
+        ProgressTracker.check_files_status()
         wait_for_finish()
     end
   end
@@ -104,21 +105,25 @@ defmodule Csv2sql.Stages.Analyze do
           |> Enum.join("\n")
 
         File.write(get_schema_path(), query, [:append])
+      end
 
-        if Helpers.get_config(:insert_data) do
-          # Start a producer for the file
-          {:ok, pid} = DbLoader.Producer.start_link(file)
+      if Helpers.get_config(:insert_data) do
+        # Start a producer for the file
+        {:ok, pid} = DbLoader.Producer.start_link(file)
 
-          # Subscribe consumers to the producer
-          GenStage.sync_subscribe(
-            DbLoader.ConsumerSupervisor,
-            cancel: :temporary,
-            min_demand: 0,
-            # Number of consumers loading data in database
-            max_demand: Helpers.get_config(:db_worker_count),
-            to: pid
-          )
-        end
+        # Subscribe consumers to the producer
+        GenStage.sync_subscribe(
+          DbLoader.ConsumerSupervisor,
+          cancel: :temporary,
+          min_demand: 0,
+          # Number of consumers loading data in database
+          max_demand: Helpers.get_config(:db_worker_count),
+          to: pid
+        )
+      else
+        file = %Csv2sql.File{file | status: :done}
+
+        ProgressTracker.update_file(file)
       end
     catch
       _, reason ->
@@ -127,11 +132,11 @@ defmodule Csv2sql.Stages.Analyze do
     end
   end
 
-  defp get_file_stats(~M{%Csv2sql.File path} = file) do
-    ~M{size} = File.stat!(path)
+  defp get_file_stats(%Csv2sql.File{path: path} = file) do
+    %{size: size} = File.stat!(path)
     {row_count, column_types} = TypeDeducer.get_count_and_types(path)
 
-    ~M{%Csv2sql.File file | size, row_count, column_types}
+    %{file | size: Sizeable.filesize(size), row_count: row_count, column_types: column_types}
   end
 
   defp is_csv?(filepath) do

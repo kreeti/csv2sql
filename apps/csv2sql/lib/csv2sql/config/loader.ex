@@ -3,7 +3,6 @@ defmodule Csv2sql.Config.Loader do
     Prepares and loads configurations for csv2sql
   """
 
-  import ShorterMaps
   alias Csv2sql.Config
 
   # Default configurations and guards
@@ -97,11 +96,19 @@ defmodule Csv2sql.Config.Loader do
     db_worker_count = get_db_worker_count(args)
     remove_illegal_characters = to_bool(args[:remove_illegal_characters], false)
 
-    config = ~M{
-         dashboard, source_directory, schema_path, insert_schema, insert_data,
-         ordered, worker_count, parse_datetime, db_worker_count, schema_infer_chunk_size,
-         remove_illegal_characters
-        }
+    config = %{
+      dashboard: dashboard,
+      source_directory: source_directory,
+      schema_path: schema_path,
+      insert_schema: insert_schema,
+      insert_data: insert_data,
+      ordered: ordered,
+      worker_count: worker_count,
+      parse_datetime: parse_datetime,
+      db_worker_count: db_worker_count,
+      schema_infer_chunk_size: schema_infer_chunk_size,
+      remove_illegal_characters: remove_illegal_characters
+    }
 
     struct(Config, Map.merge(config, db_config))
   end
@@ -127,42 +134,51 @@ defmodule Csv2sql.Config.Loader do
     datetime_patterns =
       [@datetime_pattern | get_pattern_list(args[:datetime_patterns])] |> Enum.uniq()
 
-    ~M{db_type, db_url, varchar_limit, insertion_chunk_size, log, date_patterns, datetime_patterns, drop_existing_tables}
+    %{
+      db_type: db_type,
+      db_url: db_url,
+      varchar_limit: varchar_limit,
+      insertion_chunk_size: insertion_chunk_size,
+      log: log,
+      date_patterns: date_patterns,
+      datetime_patterns: datetime_patterns,
+      drop_existing_tables: drop_existing_tables
+    }
   end
 
-  defp get_worker_count(~M{worker_count})
+  defp get_worker_count(%{worker_count: worker_count})
        when worker_count >= @min_worker_count and worker_count <= @max_worker_count,
        do: worker_count
 
   defp get_worker_count(_), do: worker_count()
 
-  defp get_db_worker_count(~M{db_worker_count})
+  defp get_db_worker_count(%{db_worker_count: db_worker_count})
        when db_worker_count >= @min_db_worker_count and db_worker_count <= @max_db_worker_count,
        do: db_worker_count
 
   defp get_db_worker_count(_), do: @default_db_worker_count
 
-  defp get_insertion_chunk_size(~M{insertion_chunk_size})
+  defp get_insertion_chunk_size(%{insertion_chunk_size: insertion_chunk_size})
        when insertion_chunk_size >= @min_insertion_chunk_size and
               insertion_chunk_size <= @max_insertion_chunk_size,
        do: insertion_chunk_size
 
   defp get_insertion_chunk_size(_), do: @insertion_chunk_size
 
-  defp get_varchar_limit(~M{varchar_limit})
+  defp get_varchar_limit(%{varchar_limit: varchar_limit})
        when varchar_limit >= @min_varchar_limit and varchar_limit <= @max_varchar_limit,
        do: varchar_limit
 
   defp get_varchar_limit(_), do: @varchar_limit
 
-  defp get_schema_infer_chunk_size(~M{schema_infer_chunk_size})
+  defp get_schema_infer_chunk_size(%{schema_infer_chunk_size: schema_infer_chunk_size})
        when schema_infer_chunk_size >= @min_schema_infer_chunk_size and
               schema_infer_chunk_size <= @max_schema_infer_chunk_size,
        do: schema_infer_chunk_size
 
   defp get_schema_infer_chunk_size(_), do: @schema_infer_chunk_size
 
-  defp get_db_type(~M{db_type}), do: db_type |> to_string() |> strip_string() |> get_db_type()
+  defp get_db_type(%{db_type: db_type}), do: db_type |> to_string() |> strip_string() |> get_db_type()
 
   defp get_db_type("mysql"), do: :mysql
   defp get_db_type("postgres"), do: :postgres

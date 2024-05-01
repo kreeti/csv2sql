@@ -3,7 +3,6 @@ defmodule Csv2sql.Config.LoaderTest do
   alias Csv2sql.Config.Loader
 
   @default_config %{db_url: "user@pass:host/db"}
-  import ShorterMaps
 
   describe "load/1" do
     test "when args are passed loads them in env" do
@@ -102,7 +101,7 @@ defmodule Csv2sql.Config.LoaderTest do
       |> Map.put(:source_directory, source_directory)
       |> Loader.load()
 
-      ~M{%Csv2sql.Config schema_path} = Application.get_env(:csv2sql, :config)
+      %Csv2sql.Config{schema_path: schema_path} = Application.get_env(:csv2sql, :config)
       assert schema_path == source_directory
     end
 
@@ -119,8 +118,15 @@ defmodule Csv2sql.Config.LoaderTest do
       })
       |> Loader.load()
 
-      ~M{%Csv2sql.Config db_type, db_url, insertion_chunk_size, date_patterns, datetime_patterns, log, varchar_limit} =
-        Application.get_env(:csv2sql, :config)
+      %Csv2sql.Config{
+        db_type: db_type,
+        db_url: db_url,
+        insertion_chunk_size: insertion_chunk_size,
+        date_patterns: date_patterns,
+        datetime_patterns: datetime_patterns,
+        log: log,
+        varchar_limit: varchar_limit
+      } = Application.get_env(:csv2sql, :config)
 
       assert is_nil(db_type)
       assert is_nil(db_url)
@@ -149,8 +155,15 @@ defmodule Csv2sql.Config.LoaderTest do
         |> Map.put(config, true)
         |> Loader.load()
 
-        ~M{%Csv2sql.Config db_type, db_url, insertion_chunk_size, date_patterns, datetime_patterns, log, varchar_limit} =
-          Application.get_env(:csv2sql, :config)
+        %Csv2sql.Config{
+          db_type: db_type,
+          db_url: db_url,
+          insertion_chunk_size: insertion_chunk_size,
+          date_patterns: date_patterns,
+          datetime_patterns: datetime_patterns,
+          log: log,
+          varchar_limit: varchar_limit
+        } = Application.get_env(:csv2sql, :config)
 
         assert db_type == :mysql
         assert db_url == "ecto://some_url"

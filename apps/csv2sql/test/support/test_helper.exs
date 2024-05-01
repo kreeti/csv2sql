@@ -1,13 +1,11 @@
 defmodule Csv2sql.Support.TestHelper do
   @moduledoc false
   use ExUnit.CaseTemplate
-  import ShorterMaps
 
   using do
     quote do
       require unquote(__MODULE__)
       import unquote(__MODULE__)
-      import ShorterMaps
     end
   end
 
@@ -79,7 +77,7 @@ defmodule Csv2sql.Support.TestHelper do
     Enum.each([:mysql, :postgres], fn db ->
       # Start database Repos
       repo = Csv2sql.Database.get_repo(db)
-      ~M{db_url} = Application.get_env(:csv2sql, :"#{db}_config")
+      %{db_url: db_url} = Application.get_env(:csv2sql, :"#{db}_config")
 
       case repo.start_link(url: "ecto://#{db_url}") do
         {:ok, conn} -> conn

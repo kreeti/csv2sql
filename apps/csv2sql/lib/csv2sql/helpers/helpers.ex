@@ -2,13 +2,14 @@ defmodule Csv2sql.Helpers do
   @moduledoc """
     Common Helper functions
   """
-  import ShorterMaps
 
   @spec get_config(any) :: any
   def get_config(key), do: Application.get_env(:csv2sql, :config) |> Map.get(key)
 
   def db_access_required() do
-    ~M{%Csv2sql.Config insert_schema, insert_data } = Application.get_env(:csv2sql, :config)
+    %Csv2sql.Config{insert_schema: insert_schema, insert_data: insert_data} =
+      Application.get_env(:csv2sql, :config)
+
     insert_schema || insert_data
   end
 
@@ -47,10 +48,20 @@ defmodule Csv2sql.Helpers do
     end)
   end
 
-  defp strip_datetime(~M{%DateTime year, month, day}, true),
+  defp strip_datetime(%DateTime{year: year, month: month, day: day}, true),
     do: Date.new!(year, month, day, Calendar.ISO)
 
-  defp strip_datetime(~M{%DateTime year, month, day, hour, minute, second}, false) do
+  defp strip_datetime(
+         %DateTime{
+           year: year,
+           month: month,
+           day: day,
+           hour: hour,
+           minute: minute,
+           second: second
+         },
+         false
+       ) do
     %DateTime{
       year: year,
       month: month,

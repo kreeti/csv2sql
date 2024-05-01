@@ -4,7 +4,6 @@ defmodule Csv2sql.DbLoader.Producer do
   """
 
   use GenStage
-  import ShorterMaps
   alias NimbleCSV.RFC4180, as: CSV
   alias Csv2sql.Helpers
 
@@ -16,13 +15,13 @@ defmodule Csv2sql.DbLoader.Producer do
 
     GenStage.start_link(
       __MODULE__,
-      ~M{file},
+      %{file: file},
       name: {:via, Registry, {Csv2sql.Loader.ProducerRegistry, file.path}}
     )
   end
 
   @impl true
-  def init(~M{file} = state) do
+  def init(%{file: file} = state) do
     bom = :unicode.encoding_to_bom(:utf8)
 
     csv_stream =
@@ -37,7 +36,7 @@ defmodule Csv2sql.DbLoader.Producer do
   end
 
   @impl true
-  def handle_demand(demand, ~M{file, csv_stream} = state) do
+  def handle_demand(demand, %{file: file, csv_stream: csv_stream} = state) do
     {csv_chunks, remainder_stream} = StreamSplit.take_and_drop(csv_stream, demand)
     new_state = %{state | csv_stream: remainder_stream}
 

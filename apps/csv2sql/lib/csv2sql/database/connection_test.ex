@@ -4,7 +4,6 @@ defmodule Csv2sql.Database.ConnectionTest do
   """
 
   use GenServer
-  import ShorterMaps
   alias Csv2sql.Database
 
   @type connect_args() :: %{
@@ -25,7 +24,7 @@ defmodule Csv2sql.Database.ConnectionTest do
 
   @spec attempt_connection(connect_args()) ::
           {:connected, pid()} | {:error, DBConnection.ConnectionError.t()}
-  def attempt_connection(~M{db_url, db_type}) do
+  def attempt_connection(%{db_url: db_url, db_type: db_type}) do
     repo = Database.get_repo(db_type)
 
     conn =
@@ -71,22 +70,22 @@ defmodule Csv2sql.Database.ConnectionTest do
   end
 
   @impl GenServer
-  def handle_call({:check_db_connection, _args}, _from, ~M{ref} = state)
+  def handle_call({:check_db_connection, _args}, _from, %{ref: ref} = state)
       when is_reference(ref),
       do: {:reply, {:error, :on_going}, state}
 
   @impl GenServer
-  def handle_call({:check_db_connection, ~M{db_url, db_type, caller}}, _from, %{ref: nil} = state)
+  def handle_call({:check_db_connection, %{db_url: db_url, db_type: db_type, caller: caller}}, _from, %{ref: nil} = state)
       when not is_nil(db_url) do
     task =
       Task.Supervisor.async_nolink(
         Csv2sql.Database.ConnectionSupervisor,
         __MODULE__,
         :attempt_connection,
-        [~M{db_url, db_type}]
+        [%{db_url: db_url, db_type: db_type}]
       )
 
-    {:reply, :ok, ~M{state | ref: task.ref, caller}}
+    {:reply, :ok, %{state | ref: task.ref, caller: caller}}
   end
 
   @impl GenServer

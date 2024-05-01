@@ -4,7 +4,7 @@ defmodule DashboardWeb.Live.MainLive do
   alias DashBoard.Config
   alias DashBoard.DbAttribute
   alias Csv2sql.Database.ConnectionTest
-  alias DashboardWeb.Live.ConfigLive
+  alias DashboardWeb.Live.{ConfigLive, StartLive, AboutLive}
 
   @debounce_time 1000
 
@@ -29,42 +29,55 @@ defmodule DashboardWeb.Live.MainLive do
        matching_date_time: nil,
        constraints: Csv2sql.Config.Loader.get_constraints(),
        time_spend: 0,
-       state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}
+       state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil},
+       memory_usage: 0,
+       cpu_usage: 0
      )}
   end
 
   @impl true
-  def handle_event("start", _unsigned_params, socket) do
-    if socket.assigns.changeset.valid? do
-      Csv2sql.ProgressTracker.add_subscriber()
+  def handle_event("start", _unsigned_params, %{assigns: assigns} = socket) do
+    socket_state = assigns.state
 
-      Task.start(fn ->
-        socket.assigns.changeset
-        |> prepare_args()
-        |> Csv2sql.Config.Loader.load()
+    cond do
+      assigns.changeset.valid? and socket_state.status == :init ->
+        Csv2sql.ProgressTracker.add_subscriber()
 
-        Csv2sql.Stages.Analyze.analyze_files()
-      end)
+        Task.start(fn ->
+          socket.assigns.changeset
+          |> prepare_args()
+          |> Csv2sql.Config.Loader.load()
 
-      Process.send_after(self(), :updated_state, 200)
+          Csv2sql.Stages.Analyze.analyze_files()
+        end)
+
+        send(self(), :update_state)
+
+        {:noreply, socket}
+
+      socket_state.status == :working ->
+        {:noreply, socket}
+
+      true ->
+        Csv2sql.ProgressTracker.reset_state()
+
+        {:noreply,
+         assign(socket,
+           state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil},
+           time_spend: 0,
+           memory_usage: 0,
+           cpu_usage: 0
+         )}
     end
-
-    {:noreply, assign(socket, state: Csv2sql.ProgressTracker.get_state())}
   end
 
   @impl true
-  def handle_event("reset", _unsigned_params, socket) do
-    {:noreply,
-     assign(socket, state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil}, time_spend: 0)}
+  def handle_event("page-change", %{"page" => page}, socket) do
+    {:noreply, assign(socket, %{page: page})}
   end
 
   @impl true
-  def handle_event("page-change", ~m{page}, socket) do
-    {:noreply, assign(socket, ~M{page})}
-  end
-
-  @impl true
-  def handle_event("open-modal", ~m{modal}, socket) do
+  def handle_event("open-modal", %{"modal" => modal}, socket) do
     {:noreply, assign(socket, :modal, modal)}
   end
 
@@ -92,7 +105,7 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_event("add-new-" <> field, _attrs, ~M{assigns} = socket)
+  def handle_event("add-new-" <> field, _attrs, %{assigns: assigns} = socket)
       when field in ~w[db-attr date-pattern date-time-pattern] do
     new_field =
       field
@@ -121,7 +134,7 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_event("remove-" <> field, ~m{attrid}, ~M{assigns} = socket)
+  def handle_event("remove-" <> field, %{"attrid" => attrid}, %{assigns: assigns} = socket)
       when field in ~w[db-attr date-pattern date-time-pattern] do
     association = "#{field}s" |> String.replace("-", "_") |> String.to_atom()
 
@@ -148,34 +161,34 @@ defmodule DashboardWeb.Live.MainLive do
   end
 
   @impl true
-  def handle_info(:updated_state, socket) do
-    state = Csv2sql.ProgressTracker.get_state()
+  def handle_info(:update_state, socket) do
+    state = socket.assigns.state
 
     time_taken =
-      DateTime.utc_now()
-      |> Time.diff(state.start_time, :millisecond)
-      |> Kernel./(1000)
-      |> Float.round()
+      if is_nil(state.start_time) do
+        0
+      else
+        DateTime.utc_now()
+        |> Time.diff(state.start_time, :millisecond)
+        |> Kernel./(1000)
+        |> Float.round()
+      end
 
-    state.status
-    |> case do
-      status when status in [:finish] ->
-        :finish
-
-      {:error, reason} ->
-        IO.inspect("Error #{inspect(reason)}")
-        reason
-
-      _ ->
-        Process.send_after(self(), :updated_state, 200)
-        :working
+    if state.status in [:init, :working] do
+      Process.send_after(self(), :update_state, 200)
     end
 
-    {:noreply, assign(socket, state: state, time_spend: time_taken)}
+    {:noreply,
+     assign(socket,
+       state: Csv2sql.ProgressTracker.get_state(),
+       time_spend: time_taken,
+       cpu_usage: :cpu_sup.util() |> Float.round(2),
+       memory_usage: :erlang.memory(:total) |> Sizeable.filesize()
+     )}
   end
 
   @impl true
-  def handle_info(:check_db_connection, ~M{assigns} = socket) do
+  def handle_info(:check_db_connection, %{assigns: assigns} = socket) do
     with(
       db_url = create_db_url(assigns.changeset.changes, hide_password: false),
       true <- not ("NA" == db_url),
@@ -204,7 +217,7 @@ defmodule DashboardWeb.Live.MainLive do
     do: {:noreply, assign(socket, db_connection_established: true)}
 
   @impl true
-  def handle_info({:error, _}, ~M{assigns} = socket) do
+  def handle_info({:error, _}, %{assigns: assigns} = socket) do
     {:noreply,
      assign(
        socket,
@@ -214,77 +227,26 @@ defmodule DashboardWeb.Live.MainLive do
      )}
   end
 
+  @impl true
+  def handle_info({:report_error, reason}, socket) do
+    IO.inspect("Reported Error #{inspect(reason)}")
+    {:noreply, socket}
+  end
+
   defp render_page(assigns) do
     case assigns.page do
       "config" ->
         ConfigLive.config_page(assigns)
 
-      page when page in ["start", "reset"] ->
-        ~H"""
-        <div>
-          <%= cond do %>
-           <% @state.status not in [:init, :working, :finish] -> %>
-            <% {:error, reason} = @state.status %>
-            <h2 class="text-center mb-4 mt-2">Errors! <%= inspect(reason)%> </h2>
-            <div class="w-100 d-flex justify-content-center align-items-center">
-            <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
-            </div>
-
-           <% @state.status == :init and @changeset.valid? -> %>
-            <h2 class="text-center mb-4 mt-2">Start Parse</h2>
-            <div class="w-100 d-flex justify-content-center align-items-center">
-            <button class="btn btn-primary px-4 text-center" phx-click="start">Start</button>
-            </div>
-
-          <% not @changeset.valid? -> %>
-           <%= inspect(@changeset)%>
-           <h2 class="text-center mb-4 mt-2">Errors in config, please check</h2>
-
-          <% @state.status == :finish -> %>
-            <h2 class="text-center mb-4 mt-2">Finished! Reset</h2>
-            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
-              <strong> Total time taken: </strong> <%= @time_spend %> seconds
-              <button class="btn btn-primary px-4 text-center" phx-click="reset">reset</button>
-            </div>
-
-          <% true -> %>
-            <h2 class="text-center mb-4 mt-2">Working!</h2>
-            <div class="w-100 d-flex flex-column justify-content-center align-items-center">
-              <strong> Time Elapsed: </strong> <%= @time_spend %> seconds
-            </div>
-          <% end %>
-
-          <table class = "table w-75 m-2 table-bordered border-dark">
-            <tr>
-              <th> File name </th>
-              <th> size </th>
-              <th> row_count </th>
-              <th> rows_processed </th>
-              <th> status </th>
-            </tr>
-            <tr :for={file <- Map.values(@state.files)}>
-              <td>
-                <div><%= file.name %> </div>
-                <div><a href={"file:///#{file.path}"} target="_blank"><%= file.path %></a></div>
-              </td>
-              <td> <%= file.size %> </td>
-              <td> <%= file.row_count %> </td>
-              <td> <%= file.rows_processed %> </td>
-              <td> <%= file.status %> </td>
-            </tr>
-
-          </table>
-        </div>
-        """
+      "start" ->
+        StartLive.start_page(assigns)
 
       "about" ->
-        ~H"""
-        About
-        """
+        AboutLive.about_page(assigns)
     end
   end
 
-  defp db_connection_checker(~M{assigns} = socket, args) do
+  defp db_connection_checker(%{assigns: assigns} = socket, args) do
     if db_config_updated?(assigns, args) do
       if assigns.db_connection_debouncer,
         do: Process.cancel_timer(assigns.db_connection_debouncer)
@@ -296,7 +258,7 @@ defmodule DashboardWeb.Live.MainLive do
     end
   end
 
-  defp db_config_updated?(~M{changeset}, args) do
+  defp db_config_updated?(%{changeset: changeset}, args) do
     # TODO: Take into account custom db params
     Ecto.Changeset.get_field(changeset, :db_type) != Map.get(args, "db_type") ||
       Ecto.Changeset.get_field(changeset, :db_username) != Map.get(args, "db_username") ||
@@ -305,7 +267,7 @@ defmodule DashboardWeb.Live.MainLive do
       Ecto.Changeset.get_field(changeset, :db_name) != Map.get(args, "db_name")
   end
 
-  defp update_matching_date_time(~M{assigns} = socket, attrs \\ %{}) do
+  defp update_matching_date_time(%{assigns: assigns} = socket, attrs \\ %{}) do
     date_time_sample =
       get_in(attrs, ["config", "date_time_trial"]) ||
         Ecto.Changeset.get_field(assigns.changeset, :date_time_trial)
