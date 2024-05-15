@@ -21,13 +21,10 @@ defmodule DashboardWeb.Live.StartLive do
           </span>
         </div>
         <div>
-          <%= if @state.status == :finish and not is_nil(@state.validation_status) do %>
-            <div><strong> Validation Status: </strong>
-              <%= if @state.validation_status == :passed do %>
-                <span class="validation-status"> Passed!</span>
-              <% else %>
-                <span class="validation-status error-status"> Failed!(Check logs) </span>
-              <% end %>
+          <%= if not is_nil(@state.validation_status) do %>
+            <div>
+                <strong> Validation Status: </strong>
+                <span class={"validation-status #{error_status_class(@state.validation_status)}"}><%= @state.validation_status %>!</span>
             </div>
           <% end %>
         </div>
@@ -109,7 +106,7 @@ defmodule DashboardWeb.Live.StartLive do
   end
 
   defp error_status_class(status) do
-    if is_tuple(status), do: "error-status", else: ""
+    if is_tuple(status) or status == :failed, do: "error-status", else: ""
   end
 
   defp spinner_loading_class(status) do

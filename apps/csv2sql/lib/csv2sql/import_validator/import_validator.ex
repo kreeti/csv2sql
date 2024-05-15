@@ -70,10 +70,12 @@ defmodule Csv2sql.ImportValidator.ImportValidator do
       Ecto.Query.from(p in table_name, select: count("*"))
       |> Csv2sql.Database.get_repo(Csv2sql.Helpers.get_config(:db_type)).one()
     catch
-      _, _ ->
+      _, reason ->
         ("An exception occurred !" <>
            "#{IO.ANSI.red()}✗#{IO.ANSI.reset()}")
         |> IO.puts()
+
+        ProgressTracker.report_error(reason)
 
         -1
     end
