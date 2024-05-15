@@ -59,7 +59,7 @@ defmodule DashboardWeb.Live.MainLive do
 
         {:noreply, socket}
 
-      socket_state.status == :working ->
+      socket_state.status == :working or is_nil(socket_state.validation_status) ->
         {:noreply, socket}
 
       true ->
@@ -67,7 +67,11 @@ defmodule DashboardWeb.Live.MainLive do
 
         {:noreply,
          assign(socket,
-           state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil},
+           state: %Csv2sql.ProgressTracker.State{
+             status: :init,
+             start_time: nil,
+             validation_status: nil
+           },
            time_spend: 0,
            memory_usage: 0,
            cpu_usage: 0
@@ -178,7 +182,7 @@ defmodule DashboardWeb.Live.MainLive do
         |> Float.round()
       end
 
-    if state.status in [:init, :working] do
+    if state.status in [:init, :working] or is_nil(state.validation_status) do
       Process.send_after(self(), :update_state, 200)
     end
 

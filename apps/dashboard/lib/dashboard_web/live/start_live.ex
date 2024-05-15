@@ -21,7 +21,7 @@ defmodule DashboardWeb.Live.StartLive do
           </span>
         </div>
         <div>
-          <%= if @state.status == :finish do %>
+          <%= if @state.status == :finish and not is_nil(@state.validation_status) do %>
             <div><strong> Validation Status: </strong>
               <%= if @state.validation_status == :passed do %>
                 <span class="validation-status"> Passed!</span>
@@ -94,7 +94,7 @@ defmodule DashboardWeb.Live.StartLive do
           <%= cond do %>
             <% @state.status == :init -> %> <span> Start!</span>
             <% @state.status == :working -> %> <span> Working.. </span>
-            <% @state.status == :finish -> %> <span> Finished!  Reset? </span>
+            <% @state.status == :finish and @state.validation_status == :passed -> %> <span> Finished!  Reset? </span>
             <% true -> %> <span id="error_stage" role="button" phx-click="page-change" phx-value-page="start"> ERROR! Reset?</span>
           <% end %>
           </div>
