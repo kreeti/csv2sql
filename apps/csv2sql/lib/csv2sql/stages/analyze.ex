@@ -42,6 +42,7 @@ defmodule Csv2sql.Stages.Analyze do
     Csv2sql.ProgressTracker.get_state().status
     |> case do
       status when status in [:finish] ->
+        Csv2sql.ImportValidator.ImportValidator.validate_import()
         :ok
 
       {:error, reason} ->

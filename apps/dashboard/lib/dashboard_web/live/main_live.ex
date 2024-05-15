@@ -29,7 +29,11 @@ defmodule DashboardWeb.Live.MainLive do
        matching_date_time: nil,
        constraints: Csv2sql.Config.Loader.get_constraints(),
        time_spend: 0,
-       state: %Csv2sql.ProgressTracker.State{status: :init, start_time: nil},
+       state: %Csv2sql.ProgressTracker.State{
+         status: :init,
+         start_time: nil,
+         validation_status: nil
+       },
        memory_usage: 0,
        cpu_usage: 0
      )}

@@ -13,5 +13,6 @@ defmodule Csv2sql.ProgressTracker.State do
     field(:files, files_map(), default: %{})
     field(:status, :init | :working | :finish | {:error, String.t()}, default: :init)
     field(:subscribers, list(pid()), default: [])
+    field(:validation_status, :passed | :failed, default: nil)
   end
 end
