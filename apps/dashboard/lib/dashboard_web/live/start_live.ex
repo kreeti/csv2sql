@@ -20,6 +20,14 @@ defmodule DashboardWeb.Live.StartLive do
             <% end %>
           </span>
         </div>
+        <div>
+          <%= if not is_nil(@state.validation_status) do %>
+            <div>
+                <strong> Validation Status: </strong>
+                <span class={"validation-status #{error_status_class(@state.validation_status)}"}><%= @state.validation_status %>!</span>
+            </div>
+          <% end %>
+        </div>
         <%= if @state.status != :init do %>
           <div><strong> Total Files: </strong><%= Enum.count(Map.values(@state.files)) %> </div>
           <div><strong> Files Imported: </strong><%= Enum.count(Map.values(@state.files), fn %{status: status} -> status == :done end) %> </div>
@@ -83,7 +91,7 @@ defmodule DashboardWeb.Live.StartLive do
           <%= cond do %>
             <% @state.status == :init -> %> <span> Start!</span>
             <% @state.status == :working -> %> <span> Working.. </span>
-            <% @state.status == :finish -> %> <span> Finished!  Reset? </span>
+            <% @state.status == :finish and @state.validation_status == :passed -> %> <span> Finished!  Reset? </span>
             <% true -> %> <span id="error_stage" role="button" phx-click="page-change" phx-value-page="start"> ERROR! Reset?</span>
           <% end %>
           </div>
@@ -98,7 +106,7 @@ defmodule DashboardWeb.Live.StartLive do
   end
 
   defp error_status_class(status) do
-    if is_tuple(status), do: "error-status", else: ""
+    if is_tuple(status) or status == :failed, do: "error-status", else: ""
   end
 
   defp spinner_loading_class(status) do

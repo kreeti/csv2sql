@@ -30,6 +30,10 @@ defmodule Csv2sql.ProgressTracker do
     GenServer.cast(__MODULE__, :check_files_status)
   end
 
+  @spec update_validation_status(:passed | :failed) :: :ok
+  def update_validation_status(status),
+    do: GenServer.cast(__MODULE__, {:update_validation_status, status})
+
   # Update file
   @spec update_file(Csv2sql.File.t()) :: :ok
   def update_file(file),
@@ -55,7 +59,7 @@ defmodule Csv2sql.ProgressTracker do
 
   @impl true
   def init(_),
-    do: {:ok, %State{start_time: nil}}
+    do: {:ok, %State{start_time: nil, validation_status: nil}}
 
   @impl true
   def handle_call(:get_state, _from, state), do: {:reply, state, state}
@@ -74,8 +78,12 @@ defmodule Csv2sql.ProgressTracker do
   end
 
   @impl true
-  def handle_call(:add_subscriber, {caller_pid, _ref_tag}, %State{subscribers: subscribers} = state),
-    do: {:reply, :ok, %{state | subscribers: [caller_pid | subscribers]}}
+  def handle_call(
+        :add_subscriber,
+        {caller_pid, _ref_tag},
+        %State{subscribers: subscribers} = state
+      ),
+      do: {:reply, :ok, %{state | subscribers: [caller_pid | subscribers]}}
 
   @impl true
   def handle_call({:report_error, _error}, _from, %State{status: :error} = state),
@@ -91,8 +99,18 @@ defmodule Csv2sql.ProgressTracker do
   end
 
   @impl true
-  def handle_cast(:reset_state, state), do:
-    {:noreply, %{state | files: %{}, subscribers: [], status: :init, start_time: nil, end_time: nil}}
+  def handle_cast(:reset_state, state),
+    do:
+      {:noreply,
+       %{
+         state
+         | files: %{},
+           subscribers: [],
+           status: :init,
+           start_time: nil,
+           end_time: nil,
+           validation_status: nil
+       }}
 
   @impl true
   def handle_cast({:update_file, _file}, %State{status: :error} = state), do: {:noreply, state}
@@ -135,6 +153,10 @@ defmodule Csv2sql.ProgressTracker do
 
     {:noreply, state}
   end
+
+  @impl true
+  def handle_cast({:update_validation_status, status}, state),
+    do: {:noreply, %{state | validation_status: status}}
 
   defp check_files_status_and_update_state(files, %State{subscribers: subscribers} = state) do
     files

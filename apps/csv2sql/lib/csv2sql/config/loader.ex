@@ -96,6 +96,8 @@ defmodule Csv2sql.Config.Loader do
     db_worker_count = get_db_worker_count(args)
     remove_illegal_characters = to_bool(args[:remove_illegal_characters], false)
 
+    make_directory_if_not_exists(source_directory <> "/validated/")
+
     config = %{
       dashboard: dashboard,
       source_directory: source_directory,
@@ -202,4 +204,8 @@ defmodule Csv2sql.Config.Loader do
     do: String.split(pattern_str, ";")
 
   defp get_pattern_list(_pattern_str), do: []
+
+  defp make_directory_if_not_exists(path) do
+    if not File.exists?(path), do: File.mkdir(path)
+  end
 end

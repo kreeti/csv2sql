@@ -156,7 +156,7 @@ defmodule Csv2sql.Database do
 
   defp get_db_module(), do: get_db(Helpers.get_config(:db_type))
 
-  defp get_table_name(file_path) do
+  def get_table_name(file_path) do
     file_path
     |> Path.basename()
     |> String.trim_trailing()
