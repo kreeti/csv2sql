@@ -4,6 +4,7 @@ defmodule Csv2sql.Database do
   """
   use Csv2sql.Types
   alias Csv2sql.{Config, ProgressTracker, Helpers}
+  require Ecto.{Query, Adapter}
   require Logger
 
   @ordering_column_name "CSV_ORDERING_ID"
@@ -193,5 +194,29 @@ defmodule Csv2sql.Database do
         {header, encode(type, String.trim(data))}
       end
     )
+  end
+
+  def get_db_row_count_if_exists(file_path) do
+    repo = Helpers.get_config(:db_type) |> get_repo()
+
+    table_name = get_table_name(file_path)
+
+    if Ecto.Adapters.SQL.table_exists?(repo, table_name),
+      do: get_db_count(table_name),
+      else: 0
+  end
+
+  defp get_db_count(table_name) do
+    try do
+      Ecto.Query.from(p in table_name, select: count("*"))
+      |> Csv2sql.Database.get_repo(Csv2sql.Helpers.get_config(:db_type)).one()
+    catch
+      _, _ ->
+        ("An exception occurred !" <>
+           "#{IO.ANSI.red()}✗#{IO.ANSI.reset()}")
+        |> IO.puts()
+
+        -1
+    end
   end
 end
