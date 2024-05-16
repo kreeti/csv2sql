@@ -5,8 +5,6 @@ defmodule Csv2sql.ImportValidator.ImportValidator do
 
   alias Csv2sql.{Database, Helpers, ProgressTracker}
 
-  require Ecto.Query
-
   def validate_import() do
     file_list = Csv2sql.ProgressTracker.get_state()
 
@@ -42,12 +40,12 @@ defmodule Csv2sql.ImportValidator.ImportValidator do
   defp validate_csv(file, row_count) do
     IO.puts("Checking File: #{file.name}")
 
-    db_count = get_db_count(file)
+    db_count = Database.get_db_row_count_if_exists(file.path)
 
     IO.puts("Count in csv: #{row_count}")
     IO.puts("Count in database:  #{db_count}")
 
-    if row_count == db_count do
+    if row_count == (db_count - file.existing_db_row_count) do
       (IO.ANSI.green() <> "Correct !" <> IO.ANSI.reset()) |> IO.puts()
 
       File.rename(
@@ -60,22 +58,6 @@ defmodule Csv2sql.ImportValidator.ImportValidator do
       (IO.ANSI.red() <> "Incorrect!" <> IO.ANSI.reset()) |> IO.puts()
 
       false
-    end
-  end
-
-  defp get_db_count(file) do
-    table_name = Database.get_table_name(file.path)
-
-    try do
-      Ecto.Query.from(p in table_name, select: count("*"))
-      |> Csv2sql.Database.get_repo(Csv2sql.Helpers.get_config(:db_type)).one()
-    catch
-      _, _ ->
-        ("An exception occurred !" <>
-           "#{IO.ANSI.red()}✗#{IO.ANSI.reset()}")
-        |> IO.puts()
-
-        -1
     end
   end
 

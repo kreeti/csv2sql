@@ -1,6 +1,13 @@
 defmodule Csv2sql.Stages.Analyze do
   use Csv2sql.Types
-  alias Csv2sql.{TypeDeducer, Database, DbLoader, ProgressTracker, Helpers}
+
+  alias Csv2sql.{
+    TypeDeducer,
+    Database,
+    DbLoader,
+    ProgressTracker,
+    Helpers
+  }
 
   @spec analyze_files :: :ok
   def analyze_files do
@@ -137,7 +144,15 @@ defmodule Csv2sql.Stages.Analyze do
     %{size: size} = File.stat!(path)
     {row_count, column_types} = TypeDeducer.get_count_and_types(path)
 
-    %{file | size: Sizeable.filesize(size), row_count: row_count, column_types: column_types}
+    db_row_count = Database.get_db_row_count_if_exists(path)
+
+    %{
+      file
+      | size: Sizeable.filesize(size),
+        row_count: row_count,
+        column_types: column_types,
+        existing_db_row_count: db_row_count
+    }
   end
 
   defp is_csv?(filepath) do
