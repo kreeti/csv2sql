@@ -59,7 +59,8 @@ defmodule DashboardWeb.Live.MainLive do
 
         {:noreply, socket}
 
-      socket_state.status == :working or is_nil(socket_state.validation_status) ->
+      socket_state.status == :working or
+          (socket_state.status == :finished and is_nil(socket_state.validation_status)) ->
         {:noreply, socket}
 
       true ->

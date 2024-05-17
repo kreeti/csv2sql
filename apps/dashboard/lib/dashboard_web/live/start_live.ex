@@ -86,11 +86,11 @@ defmodule DashboardWeb.Live.StartLive do
     </div>
     <footer class="main-footer fixed-bottom">
       <div class={"container #{button_class(@changeset)}"} phx-click="start">
-        <div id="divSpinner" class={spinner_loading_class(@state.status)} >
+        <div id="divSpinner" class={spinner_loading_class(@state)} >
           <div id="spinnerText">
           <%= cond do %>
             <% @state.status == :init -> %> <span> Start!</span>
-            <% @state.status == :working -> %> <span> Working.. </span>
+            <% @state.status == :working  or checking_import_validation(@state) -> %> <span> Working.. </span>
             <% @state.status == :finish and @state.validation_status == :passed -> %> <span> Finished!  Reset? </span>
             <% true -> %> <span id="error_stage" role="button" phx-click="page-change" phx-value-page="start"> ERROR! Reset?</span>
           <% end %>
@@ -109,8 +109,14 @@ defmodule DashboardWeb.Live.StartLive do
     if is_tuple(status) or status == :failed, do: "error-status", else: ""
   end
 
-  defp spinner_loading_class(status) do
-    if status == :working, do: "spinner loading", else: ""
+  defp spinner_loading_class(state) do
+    if state.status == :working or checking_import_validation(state),
+      do: "spinner loading",
+      else: ""
+  end
+
+  defp checking_import_validation(state) do
+    if state.status == :finish and is_nil(state.validation_status), do: true, else: false
   end
 
   defp button_class(changeset) do
