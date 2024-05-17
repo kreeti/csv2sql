@@ -1,25 +1,21 @@
 defmodule Csv2sql.Application do
+  @moduledoc """
+    Main application module for csv2sql
+  """
+
   use Application
 
   def start(_type, _args) do
-    repo_supervisor =
-      if Application.get_env(:csv2sql, Csv2sql.MainServer)[:set_validate] ||
-           Application.get_env(:csv2sql, Csv2sql.Worker)[:set_insert_schema] ||
-           Application.get_env(:csv2sql, Csv2sql.Worker)[:set_insert_data],
-         do: [Csv2sql.get_repo()],
-         else: []
-
-    children =
-      repo_supervisor ++
-        [
-          Csv2sql.Observer,
-          Csv2sql.JobQueueServer,
-          Csv2sql.DbWorkerSupervisor,
-          Csv2sql.WorkerSupervisor,
-          Csv2sql.MainServer
-        ]
+    children = [
+      Csv2sql.ProgressTracker,
+      {Registry, keys: :unique, name: Csv2sql.Loader.ProducerRegistry},
+      {Task.Supervisor, name: Csv2sql.Database.ConnectionSupervisor},
+      Csv2sql.Database.ConnectionTest
+    ]
 
     opts = [strategy: :one_for_one, name: Csv2sql.Supervisor]
-    Supervisor.start_link(children, opts)
+    res = Supervisor.start_link(children, opts)
+
+    res
   end
 end
