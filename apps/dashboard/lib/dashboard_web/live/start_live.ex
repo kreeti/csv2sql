@@ -20,14 +20,12 @@ defmodule DashboardWeb.Live.StartLive do
             <% end %>
           </span>
         </div>
-        <div>
-          <%= if not is_nil(@state.validation_status) do %>
-            <div>
-                <strong> Validation Status: </strong>
-                <span class={"validation-status #{error_status_class(@state.validation_status)}"}><%= @state.validation_status %>!</span>
-            </div>
-          <% end %>
-        </div>
+        <%= if not is_nil(@state.validation_status) do %>
+          <div>
+              <strong> Validation Status: </strong>
+              <span class={"validation-status #{error_status_class(@state.validation_status)}"}><%= @state.validation_status %>!</span>
+          </div>
+        <% end %>
         <%= if @state.status != :init do %>
           <div><strong> Total Files: </strong><%= Enum.count(Map.values(@state.files)) %> </div>
           <div><strong> Files Imported: </strong><%= Enum.count(Map.values(@state.files), fn %{status: status} -> status == :done end) %> </div>

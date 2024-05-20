@@ -122,7 +122,7 @@ defmodule Csv2sql.Database do
       {:ok, str, replaced} =
         Codepagex.to_string(str, :iso_8859_1, Codepagex.replace_nonexistent(""), 0)
 
-      # TODO: fix t his can slow down things
+      # TODO: fix this can slow down things
       if replaced > 0,
         do:
           Logger.warning("[#{Process.get(:file)}] Replaced #{replaced} characters in binary data")
