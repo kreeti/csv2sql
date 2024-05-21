@@ -95,5 +95,7 @@ defmodule Csv2sql.ImportValidator.ImportValidator do
         IO.puts("* #{Path.basename(file)}")
       end)
     end
+
+    ProgressTracker.check_files_status()
   end
 end

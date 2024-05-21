@@ -6,7 +6,7 @@ defmodule Csv2sql.ProgressTracker do
 
   use GenServer
   use Csv2sql.Types
-  alias Csv2sql.ProgressTracker.State
+  alias Csv2sql.{Helpers, ProgressTracker.State}
   require Logger
 
   # Sets the files list
@@ -159,15 +159,25 @@ defmodule Csv2sql.ProgressTracker do
     do: {:noreply, %{state | validation_status: status}}
 
   defp check_files_status_and_update_state(files, %State{subscribers: subscribers} = state) do
-    files
-    |> Enum.all?(fn {_path, %Csv2sql.File{status: status}} -> status == :done end)
-    |> if do
-      end_time = DateTime.utc_now()
-      Enum.each(subscribers, fn subscriber -> Process.send(subscriber, :finish, []) end)
+    files_imported =
+      files
+      |> Enum.all?(fn {_path, %Csv2sql.File{status: status}} -> status == :done end)
 
-      %{state | status: :finish, files: files, end_time: end_time}
-    else
-      %{state | files: files}
+    insert_data = Helpers.get_config(:insert_data)
+
+    cond do
+      files_imported and
+          ((insert_data and not is_nil(state.validation_status)) or not insert_data) ->
+        end_time = DateTime.utc_now()
+        Enum.each(subscribers, fn subscriber -> Process.send(subscriber, :finish, []) end)
+
+        %{state | status: :finish, files: files, end_time: end_time}
+
+      files_imported and insert_data and is_nil(state.validation_status) ->
+        %{state | status: :imported, files: files}
+
+      true ->
+        %{state | files: files}
     end
   end
 end

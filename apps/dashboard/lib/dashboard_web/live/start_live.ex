@@ -16,7 +16,7 @@ defmodule DashboardWeb.Live.StartLive do
                 Error! check logs
 
               <% true -> %>
-                <%= @state.status %>
+                <%= show_status(@state.status) %>
             <% end %>
           </span>
         </div>
@@ -84,12 +84,13 @@ defmodule DashboardWeb.Live.StartLive do
     </div>
     <footer class="main-footer fixed-bottom">
       <div class={"container #{button_class(@changeset)}"} phx-click="start">
-        <div id="divSpinner" class={spinner_loading_class(@state)} >
+        <div id="divSpinner" class={spinner_loading_class(@state.status)} >
           <div id="spinnerText">
           <%= cond do %>
             <% @state.status == :init -> %> <span> Start!</span>
-            <% @state.status == :working  or checking_import_validation(@state) -> %> <span> Working.. </span>
-            <% @state.status == :finish and @state.validation_status == :passed -> %> <span> Finished!  Reset? </span>
+            <% @state.status in [:working, :imported] -> %> <span> Working.. </span>
+            <% @state.status == :validating -> %> <span> Validating.. </span>
+            <% @state.status == :finish -> %> <span> Finished!  Reset? </span>
             <% true -> %> <span id="error_stage" role="button" phx-click="page-change" phx-value-page="start"> ERROR! Reset?</span>
           <% end %>
           </div>
@@ -107,15 +108,15 @@ defmodule DashboardWeb.Live.StartLive do
     if is_tuple(status) or status == :failed, do: "error-status", else: ""
   end
 
-  defp spinner_loading_class(state) do
-    if state.status == :working or checking_import_validation(state),
+  defp spinner_loading_class(status) do
+    if status in [:working, :imported, :validating],
       do: "spinner loading",
       else: ""
   end
 
-  defp checking_import_validation(state) do
-    if state.status == :finish and is_nil(state.validation_status), do: true, else: false
-  end
+  defp show_status(:imported), do: :working
+
+  defp show_status(status), do: status
 
   defp button_class(changeset) do
     if not changeset.valid?, do: "button-disabled", else: "button-enabled"
