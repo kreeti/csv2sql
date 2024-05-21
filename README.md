@@ -42,7 +42,7 @@ Csv2Sql can automatically...
 
 * It is **completely automatic**, provide a path with hundreds of csvs having size in gigabytes and start the application, it will handle the rest!
 
-* It comes as **[browser user interface](#dashboard)**, and is super easy to configure and use.
+* It comes as **[browser user interface](#dashboard)** and is super easy to configure and use.
 
 * While you can have maximum utilization of your cpu to get excellent performance, csv2sql is fully **customizable**, also comes with [lots of options](#cmdargs) which can be changed to fine tune the application based on requirement and to lower down resource usage and database load.
 
