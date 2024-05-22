@@ -133,13 +133,6 @@ defmodule Csv2sql.Database do
     end
   end
 
-  @spec string_column_type(non_neg_integer()) :: :text | {:varchar, non_neg_integer()}
-  def string_column_type(max_data_length) do
-    if max_data_length > varchar_limit(),
-      do: :text,
-      else: {:varchar, max_data_length}
-  end
-
   # Callbacks to implement
   @callback type_mapping(type_map()) :: String.t()
 
