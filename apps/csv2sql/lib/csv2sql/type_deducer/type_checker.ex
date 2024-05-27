@@ -22,7 +22,8 @@ defmodule Csv2sql.TypeDeducer.TypeChecker do
         is_boolean: existing_type_map.is_boolean && is_boolean?(item),
         is_integer: existing_type_map.is_integer && is_integer?(item),
         is_float: existing_type_map.is_float && is_float?(item),
-        is_text: existing_type_map.is_text || is_text?(item_length)
+        is_text: existing_type_map.is_text || is_text?(item_length),
+        max_data_length: max(existing_type_map.max_data_length, item_length)
       }
     end
   end
