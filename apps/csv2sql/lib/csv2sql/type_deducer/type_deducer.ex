@@ -96,8 +96,7 @@ defmodule Csv2sql.TypeDeducer do
       is_boolean: true,
       is_integer: true,
       is_float: true,
-      is_text: false,
-      max_data_length: 0
+      is_text: false
     }
     |> List.duplicate(Enum.count(headers))
   end
@@ -111,8 +110,7 @@ defmodule Csv2sql.TypeDeducer do
         is_boolean: acc_map.is_boolean && current_map.is_boolean,
         is_integer: acc_map.is_integer && current_map.is_integer,
         is_float: acc_map.is_float && current_map.is_float,
-        is_text: acc_map.is_text || current_map.is_text,
-        max_data_length: max(acc_map.max_data_length, current_map.max_data_length)
+        is_text: acc_map.is_text || current_map.is_text
       }
     end
   end

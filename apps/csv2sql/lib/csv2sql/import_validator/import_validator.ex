@@ -40,12 +40,17 @@ defmodule Csv2sql.ImportValidator.ImportValidator do
   defp validate_csv(file, row_count) do
     IO.puts("Checking File: #{file.name}")
 
-    db_count = Database.get_db_row_count_if_exists(file.path)
+    db_row_count = Database.get_db_row_count_if_exists(file.path)
+
+    inserted_db_row_count =
+      if Helpers.get_config(:drop_existing_tables),
+        do: db_row_count,
+        else: db_row_count - file.existing_db_row_count
 
     IO.puts("Count in csv: #{row_count}")
-    IO.puts("Count in database:  #{db_count}")
+    IO.puts("Count in database:  #{inserted_db_row_count}")
 
-    if row_count == (db_count - file.existing_db_row_count) do
+    if row_count == inserted_db_row_count do
       (IO.ANSI.green() <> "Correct !" <> IO.ANSI.reset()) |> IO.puts()
 
       File.rename(
@@ -90,5 +95,7 @@ defmodule Csv2sql.ImportValidator.ImportValidator do
         IO.puts("* #{Path.basename(file)}")
       end)
     end
+
+    ProgressTracker.check_files_status()
   end
 end
