@@ -146,18 +146,22 @@ defmodule Csv2sql.Stages.Analyze do
   end
 
   defp get_file_stats(%Csv2sql.File{path: path} = file) do
-    %{size: size} = File.stat!(path)
-    {row_count, column_types} = TypeDeducer.get_count_and_types(path)
+    if Helpers.get_config(:insert_schema) or Helpers.get_config(:insert_data) do
+      %{size: size} = File.stat!(path)
+      {row_count, column_types} = TypeDeducer.get_count_and_types(path)
 
-    db_row_count = Database.get_db_row_count_if_exists(path)
+      db_row_count = Database.get_db_row_count_if_exists(path)
 
-    %{
+      %{
+        file
+        | size: Sizeable.filesize(size),
+          row_count: row_count,
+          column_types: column_types,
+          existing_db_row_count: db_row_count
+      }
+    else
       file
-      | size: Sizeable.filesize(size),
-        row_count: row_count,
-        column_types: column_types,
-        existing_db_row_count: db_row_count
-    }
+    end
   end
 
   defp is_csv?(filepath) do
