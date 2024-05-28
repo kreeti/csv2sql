@@ -17,10 +17,13 @@ defmodule Csv2sql.Database.Postgres do
       type_map[:is_boolean] -> "BOOLEAN"
       type_map[:is_integer] -> "INT"
       type_map[:is_float] -> "NUMERIC(1000, 100)"
-      type_map[:is_text] -> "TEXT"
-      true -> "VARCHAR(#{varchar_limit()})"
+      true -> type_map[:max_data_length] |> string_column_type() |> get_string_column_type()
     end
   end
+
+  defp get_string_column_type(size) when size in [:text, :long_text], do: "TEXT"
+  defp get_string_column_type({:varchar, 0}), do: "VARCHAR(1)"
+  defp get_string_column_type({:varchar, size}), do: "VARCHAR(#{size})"
 
   @impl Csv2sql.Database
   @spec db_name :: String.t()

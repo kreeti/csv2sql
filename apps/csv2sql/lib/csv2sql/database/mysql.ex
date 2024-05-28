@@ -17,11 +17,14 @@ defmodule Csv2sql.Database.MySql do
       type_map[:is_boolean] -> "BIT"
       type_map[:is_integer] -> "INT"
       type_map[:is_float] -> "DOUBLE"
-      type_map[:is_text] and type_map[:max_data_length] > 65_535 -> "LONGTEXT"
-      type_map[:is_text] -> "TEXT"
-      true -> "VARCHAR(#{varchar_limit()})"
+      true -> type_map[:max_data_length] |> string_column_type() |> get_string_column_type()
     end
   end
+
+  defp get_string_column_type(:long_text), do: "LONGTEXT"
+  defp get_string_column_type(:text), do: "TEXT"
+  defp get_string_column_type({:varchar, 0}), do: "VARCHAR(1)"
+  defp get_string_column_type({:varchar, size}), do: "VARCHAR(#{size})"
 
   @impl Csv2sql.Database
   @spec db_name :: String.t()

@@ -105,7 +105,10 @@ defmodule Csv2sql.Database do
   end
 
   @spec insert_data_chunk(Csv2sql.File.t(), list) :: :ok
-  def insert_data_chunk(%Csv2sql.File{name: name, path: path, column_types: column_types}, data_chunk) do
+  def insert_data_chunk(
+        %Csv2sql.File{name: name, path: path, column_types: column_types},
+        data_chunk
+      ) do
     encoded_data_chunk = encode_data_chunk(column_types, data_chunk)
     repo = Helpers.get_config(:db_type) |> get_repo()
 
@@ -210,6 +213,19 @@ defmodule Csv2sql.Database do
         |> IO.puts()
 
         -1
+    end
+  end
+
+  def string_column_type(max_data_length) do
+    cond do
+      max_data_length > 65_535 ->
+        :long_text
+
+      max_data_length > varchar_limit() ->
+        :text
+
+      true ->
+        {:varchar, max_data_length}
     end
   end
 end

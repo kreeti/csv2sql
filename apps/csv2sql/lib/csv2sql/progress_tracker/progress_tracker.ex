@@ -99,18 +99,23 @@ defmodule Csv2sql.ProgressTracker do
   end
 
   @impl true
-  def handle_cast(:reset_state, state),
-    do:
-      {:noreply,
-       %{
-         state
-         | files: %{},
-           subscribers: [],
-           status: :init,
-           start_time: nil,
-           end_time: nil,
-           validation_status: nil
-       }}
+  def handle_cast(:reset_state, %State{files: files} = state) do
+    files
+    |> Enum.map(fn {_path, %Csv2sql.File{producer_pid: producer_pid}} ->
+      Process.exit(producer_pid, :kill)
+    end)
+
+    {:noreply,
+     %{
+       state
+       | files: %{},
+         subscribers: [],
+         status: :init,
+         start_time: nil,
+         end_time: nil,
+         validation_status: nil
+     }}
+  end
 
   @impl true
   def handle_cast({:update_file, _file}, %State{status: :error} = state), do: {:noreply, state}
