@@ -8,15 +8,11 @@
 ## Table of Contents
 1. [What is Csv2sql ?](#what)
 2. [Why Csv2sql ?](#why)
-3. [Using from Command Line](#cmd)
-	1. [Installation and usage](#cmdinstall)
-	2. [Available command line arguments](#cmdargs)
-	3. [Examples of usage](#cmdexamples)
-4. [Using the browser based interface](#dashboard)
+3. [Using the browser based interface](#dashboard)
 	1. [Installation and usage](#dashboardinstall)
-5. [Running from source](#sourceinstall)
-6. [Supported data types](#support)
-7. [Handling custom date/datetime formats](#datetime)
+4. [Running from source](#sourceinstall)
+5. [Supported data types](#support)
+6. [Handling custom date/datetime formats](#datetime)
 7. [Known issues, caveats and troubleshooting](#issues)
 8. [Future plans](#future)
 
@@ -46,7 +42,7 @@ Csv2Sql can automatically...
 
 * While you can have maximum utilization of your cpu to get excellent performance, csv2sql is fully **customizable**, also comes with [lots of options](#cmdargs) which can be changed to fine tune the application based on requirement and to lower down resource usage and database load.
 
-* Csv2Sql supports **partial operations**, so if you only want to generate a schema file from the csvs without touching the database or you want to only insert data from the csvs into already created tables without creating the tables again or just validate already imported data, Csv2Sql has got you covered !
+* Csv2Sql supports **partial operations**, so if you want to only create the tables or insert data from the csvs into already created tables without creating the tables again or create both the tables and also insert the data from csvs, Csv2Sql has got you covered !
 
 <a name="dashboard"></a>
 ## Use csv2sql from your browser
@@ -165,20 +161,13 @@ For datetime
 <a name="issues"></a>
 ## Known issues, caveats and troubleshooting:
 
-* Sometimes the app might fail when run for the first time with some error like..
-
-```
-%MyXQL.Error{connection_id: 9, message: "(1067) (ER_INVALID_DEFAULT) Invalid default value...
-```
-In this case, please try running the app again.
-
 * Timestamp columns will lose there fractional seconds data or time zone information when importing to mysql.
 
-* When importing into a postgres database you must create the database manually before running the application, otherwise it will fail.
+* When importing into a mysql/postgres database you must create the database manually before running the application, otherwise it will fail.
 
 * Csvsql uses the csv file names as table names, make sure that the csv file names are valid table names.
 
-* Make sure your csvs have correct encoding and valid column names to avoid errors.(like a csv having duplicated column names will lead to errors when inserting in to the database).
+* Make sure your csvs have correct encoding and valid column names to avoid errors.
 
 * If you face database connection timeout errors try reducing the worker and db_worker count in the configurations or change the database timeout, pool size and other related database configurations.
 

@@ -11,13 +11,14 @@ defmodule Csv2sql.Database.MySql do
   @spec type_mapping(type_map()) :: String.t()
   def type_mapping(type_map) do
     cond do
-      type_map[:is_empty] -> "VARCHAR(#{varchar_limit()})"
+      type_map[:is_empty] -> "VARCHAR(1)"
       type_map[:is_date] -> "DATE"
       type_map[:is_datetime] -> "DATETIME"
       type_map[:is_boolean] -> "BIT"
       type_map[:is_integer] -> "INT"
       type_map[:is_float] -> "DOUBLE"
-      type_map[:is_text] -> "LONGTEXT"
+      type_map[:is_text] and type_map[:max_data_length] > 65_535 -> "LONGTEXT"
+      type_map[:is_text] -> "TEXT"
       true -> "VARCHAR(#{varchar_limit()})"
     end
   end
@@ -63,5 +64,4 @@ defmodule Csv2sql.Database.MySql do
     do: datetime |> DateTime.to_string() |> String.trim_trailing("Z")
 
   defp to_datetime_string(val), do: val
-
 end

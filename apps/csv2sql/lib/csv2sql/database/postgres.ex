@@ -11,7 +11,7 @@ defmodule Csv2sql.Database.Postgres do
   @spec type_mapping(type_map()) :: String.t()
   def type_mapping(type_map) do
     cond do
-      type_map[:is_empty] -> "VARCHAR(#{varchar_limit()})"
+      type_map[:is_empty] -> "VARCHAR(1)"
       type_map[:is_date] -> "DATE"
       type_map[:is_datetime] -> "TIMESTAMP"
       type_map[:is_boolean] -> "BOOLEAN"

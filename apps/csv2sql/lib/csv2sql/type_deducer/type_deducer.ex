@@ -96,7 +96,8 @@ defmodule Csv2sql.TypeDeducer do
       is_boolean: true,
       is_integer: true,
       is_float: true,
-      is_text: false
+      is_text: false,
+      max_data_length: 0
     }
     |> List.duplicate(Enum.count(headers))
   end
