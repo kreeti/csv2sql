@@ -21,14 +21,9 @@ defmodule Csv2sql.Database.MySql do
     end
   end
 
-  def string_column_type(max_data_length) do
-    if max_data_length > varchar_limit(),
-      do: :text,
-      else: {:varchar, max_data_length}
-  end
-
-  defp get_string_column_type(:text), do: "LONGTEXT"
-  defp get_string_column_type({:varchar, 0}), do: "VARCHAR(#{varchar_limit()})"
+  defp get_string_column_type(:long_text), do: "LONGTEXT"
+  defp get_string_column_type(:text), do: "TEXT"
+  defp get_string_column_type({:varchar, 0}), do: "VARCHAR(1)"
   defp get_string_column_type({:varchar, size}), do: "VARCHAR(#{size})"
 
   @impl Csv2sql.Database
