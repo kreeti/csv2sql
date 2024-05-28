@@ -17,5 +17,6 @@ defmodule Csv2sql.File do
     field(:column_types, csv_col_types_list(), enforce: false)
     field(:status, file_status(), default: :pending)
     field(:existing_db_row_count, non_neg_integer(), default: 0)
+    field(:producer_pid, pid(), default: nil)
   end
 end

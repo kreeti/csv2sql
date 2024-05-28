@@ -124,6 +124,10 @@ defmodule Csv2sql.Stages.Analyze do
         # Start a producer for the file
         {:ok, pid} = DbLoader.Producer.start_link(file)
 
+        file = %Csv2sql.File{file | producer_pid: pid}
+
+        ProgressTracker.update_file(file)
+
         # Subscribe consumers to the producer
         GenStage.sync_subscribe(
           DbLoader.ConsumerSupervisor,
