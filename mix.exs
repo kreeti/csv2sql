@@ -15,7 +15,21 @@ defmodule Csv2sql.MixProject do
       aliases: aliases(),
       compilers: Mix.compilers(),
       test_coverage: [tool: ExCoveralls],
-      releases: [{@app, release()}]
+      releases: [{@app, release()}],
+      name: "Csv2sql",
+      description: "Csv2Sql is a blazing fast fully automated tool to load huge CSV files into a RDBMS.",
+      package: package(),
+      source_url: "https://github.com/kreeti/csv2sql"
+    ]
+  end
+
+  defp package() do
+    [
+      name: "csv2sql",
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/kreeti/csv2sql"
+      }
     ]
   end
 
@@ -43,6 +57,7 @@ defmodule Csv2sql.MixProject do
       {:stream_split, "~> 0.1.7"},
       {:codepagex, "~> 0.1.6"},
       {:bakeware, "~> 0.2.4"},
+      {:ex_doc, "~> 0.33.0"},
 
       # For dev and/or test
       {:dotenv, github: "avdi/dotenv_elixir", only: [:test]},
