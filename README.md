@@ -30,6 +30,6 @@ Csv2Sql can automatically...
 
 * It comes as **[browser user interface](https://github.com/kreeti/csv2sql-ui)** and is super easy to configure and use.
 
-* While you can have maximum utilization of your cpu to get excellent performance, csv2sql is fully **customizable**, also comes with [lots of options](#cmdargs) which can be changed to fine tune the application based on requirement and to lower down resource usage and database load.
+* While you can have maximum utilization of your cpu to get excellent performance, csv2sql is fully **customizable**, also comes with lots of options which can be changed to fine tune the application based on requirement and to lower down resource usage and database load.
 
 * Csv2Sql supports **partial operations**, so if you want to only create the tables or insert data from the csvs into already created tables without creating the tables again or create both the tables and also insert the data from csvs, Csv2Sql has got you covered !
