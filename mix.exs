@@ -6,7 +6,7 @@ defmodule Csv2sql.MixProject do
   def project do
     [
       app: :csv2sql,
-      version: "0.1.0",
+      version: "1.0.0",
       elixir: "~> 1.13",
       # directories to find source files
       elixirc_path: elixirc_paths(Mix.env()),
